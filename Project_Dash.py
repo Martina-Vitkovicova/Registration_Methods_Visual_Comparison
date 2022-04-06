@@ -33,6 +33,9 @@ def order_slice_vertices(vertices, indices):
 
 
 def main():
+    """
+    main function
+    """
     app.layout = html.Div(className="row", children=[
         html.Div(className='six columns', children=[
             html.H6("Select the method of alignment or both for comparison:",
