@@ -5,8 +5,8 @@ import numpy as np
 import plotly.graph_objects as go
 import Project_2
 
-BONES = "OBJ_images/bones_plan.obj"
-PROSTATE = "OBJ_images/prostate_plan.obj"
+
+FILEPATH = "C:\\Users\\vitko\\Desktop\\ProjetHCI\\Organs\\"
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 app = Dash(__name__, external_stylesheets=external_stylesheets)
@@ -38,14 +38,21 @@ def main():
     """
     app.layout = html.Div(className="row", children=[
         html.Div(className='six columns', children=[
-            html.H6("Select the method of alignment or both for comparison:",
-                    style={'display': 'inline-block', "padding": "20px 50px 0px 45px"}),
+            html.H6("Select the patient:",
+                    style={'display': 'inline-block', "padding": "20px 40px 0px 45px"}),
+
+            dcc.RadioItems(options=["137", "146", "148", "198", "489", "579"], value="137", inline=True,
+                           id="patient-radioitems",
+                           style={'display': 'inline-block', "font-size": "18px", "padding": "0px 100px 0px 45px"}),
+
+            html.H6("Select the method of alignment:",
+                    style={'display': 'inline-block', "padding": "0px 50px 0px 45px"}),
 
             dcc.Checklist(options=["ICP", "Center point"], value=["ICP"], inline=True, id="alignment-checklist",
                           style={'display': 'inline-block', "font-size": "18px", "padding": "0px 100px 0px 45px"}),
 
             html.H6("Select organs/bones you want to see:",
-                    style={'display': 'inline-block', "padding": "20px 50px 0px 45px"}),
+                    style={'display': 'inline-block', "padding": "0px 50px 0px 45px"}),
 
             dcc.Checklist(options=["Bones", "Prostate", "Bladder", "Rectum"], value=["Prostate"], inline=True,
                           id="organs-checklist",
@@ -89,16 +96,17 @@ def main():
 
 @app.callback(
     Output("main-graph", "figure"),
+    Input("patient-radioitems", "value"),
     Input("alignment-checklist", "value"),
     Input("organs-icp", "clickData"),
     Input("organs-center", "clickData"),
     Input("organs-checklist", "value"))
-def update_3dgraph(alignment_checklist, icp_click_data, center_click_data, organs):
+def update_3dgraph(patient, alignment_checklist, icp_click_data, center_click_data, organs):
     timestamp = timestamp_click_data(icp_click_data, center_click_data)
-    objects = import_selected_organs(organs, timestamp)
+    objects = import_selected_organs(organs, timestamp, patient)
 
-    after_icp_meshes = get_meshes_after_icp(timestamp, objects)
-    after_center_meshes = get_meshes_after_centering(timestamp, objects)
+    after_icp_meshes = get_meshes_after_icp(timestamp, objects, patient)
+    after_center_meshes = get_meshes_after_centering(timestamp, objects, patient)
 
     camera = dict(up=dict(x=0, y=0, z=1), center=dict(x=0, y=0, z=0), eye=dict(x=0.5, y=-2, z=0))
     layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)', height=520, width=680,
@@ -121,24 +129,24 @@ def update_3dgraph(alignment_checklist, icp_click_data, center_click_data, organ
     return fig
 
 
-def import_selected_organs(organs, timestamp):
+def import_selected_organs(organs, timestamp, patient):
     objects = []
 
     if "Bones" in organs:
-        objects.extend(Project_2.import_obj(["137_bones\\bones{}.obj".format(timestamp)]))
+        objects.extend(Project_2.import_obj([FILEPATH+"{}\\bones\\bones{}.obj".format(patient, timestamp)]))
     if "Prostate" in organs:
-        objects.extend(Project_2.import_obj(["137_prostate\\prostate{}.obj".format(timestamp)]))
+        objects.extend(Project_2.import_obj([FILEPATH+"{}\\prostate\\prostate{}.obj".format(patient, timestamp)]))
     if "Bladder" in organs:
-        objects.extend(Project_2.import_obj(["137_bladder\\bladder{}.obj".format(timestamp)]))
+        objects.extend(Project_2.import_obj([FILEPATH+"{}\\bladder\\bladder{}.obj".format(patient,  timestamp)]))
     if "Rectum" in organs:
-        objects.extend(Project_2.import_obj(["137_rectum\\rectum{}.obj".format(timestamp)]))
+        objects.extend(Project_2.import_obj([FILEPATH+"{}\\rectum\\rectum{}.obj".format(patient, timestamp)]))
 
     return objects
 
 
-def get_meshes_after_icp(timestamp, objects):
-    plan_bones = Project_2.import_obj([BONES])
-    bones = Project_2.import_obj(["137_bones\\bones{}.obj".format(timestamp)])
+def get_meshes_after_icp(timestamp, objects, patient):
+    plan_bones = Project_2.import_obj([FILEPATH+"{}\\bones\\bones_plan.obj".format(patient)])
+    bones = Project_2.import_obj([FILEPATH+"{}\\bones\\bones{}.obj".format(patient, timestamp)])
 
     transform_matrix = Project_2.icp_transformation_matrices(bones[0][0], plan_bones[0][0], False)
     transfr_objects = Project_2.vertices_transformation(transform_matrix, deepcopy(objects))
@@ -147,10 +155,11 @@ def get_meshes_after_icp(timestamp, objects):
     return after_icp_meshes
 
 
-def get_meshes_after_centering(timestamp, objects):
-    prostate = Project_2.import_obj(["137_prostate\\prostate{}.obj".format(timestamp)])
+def get_meshes_after_centering(timestamp, objects, patient):
+    prostate = Project_2.import_obj([FILEPATH+"{}\\prostate\\prostate{}.obj".format(patient, timestamp)])
 
-    plan_center = Project_2.find_center_point(Project_2.import_obj([PROSTATE])[0][0])
+    plan_center = Project_2.find_center_point(Project_2.import_obj(
+        [FILEPATH+"{}\\prostate\\prostate_plan.obj".format(patient)])[0][0])
     other_center = Project_2.find_center_point(prostate[0][0])
     center_matrix = Project_2.create_translation_matrix(plan_center, other_center)
     center_transfr_objects = Project_2.vertices_transformation(center_matrix, deepcopy(objects))
@@ -183,19 +192,20 @@ def timestamp_click_data(icp_click_data, center_click_data):
     Input("z-slice-slider", "value"),
     Input("organs-icp", "clickData"),
     Input("organs-center", "clickData"),
-    Input("slices-checklist", "value"))
-def create_graph_slices(x_slider, y_slider, z_slider, icp_click_data, center_click_data, organs):
+    Input("slices-checklist", "value"),
+    Input("patient-radioitems", "value"))
+def create_graph_slices(x_slider, y_slider, z_slider, icp_click_data, center_click_data, organs, patient):
     figures = []
     names = ["X axis slice", "Y axis slice", "Z axis slice"]
     timestamp = timestamp_click_data(icp_click_data, center_click_data)
 
-    key = trimesh.load_mesh(PROSTATE)
-    prostate = trimesh.load_mesh("137_prostate/prostate{}.obj".format(timestamp))
+    key = trimesh.load_mesh(FILEPATH+"{}\\prostate\\prostate_plan.obj".format(patient))
+    prostate = trimesh.load_mesh(FILEPATH+"{}\\prostate\\prostate{}.obj".format(patient, timestamp))
     key_center = Project_2.find_center_point(key.vertices)
     other_center = Project_2.find_center_point(prostate.vertices)
     matrix = Project_2.create_translation_matrix(key_center, other_center)
 
-    meshes, centered_meshes = selected_organs_slices(matrix, organs, timestamp, prostate)
+    meshes, centered_meshes = selected_organs_slices(matrix, organs, timestamp, prostate, patient)
 
     for i in range(3):
         layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)', height=300,
@@ -212,7 +222,7 @@ def create_graph_slices(x_slider, y_slider, z_slider, icp_click_data, center_cli
     return x_fig, y_fig, z_fig
 
 
-def selected_organs_slices(matrix, organs, timestamp, prostate):
+def selected_organs_slices(matrix, organs, timestamp, prostate, patient):
     meshes, centered_meshes = [], []
 
     if "Prostate" in organs:
@@ -220,12 +230,12 @@ def selected_organs_slices(matrix, organs, timestamp, prostate):
         centered_meshes.append(deepcopy(prostate).apply_transform(matrix))
 
     if "Bladder" in organs:
-        mesh = trimesh.load_mesh("137_bladder\\bladder{}.obj".format(timestamp))
+        mesh = trimesh.load_mesh(FILEPATH+"{}\\bladder\\bladder{}.obj".format(patient, timestamp))
         meshes.append(mesh)
         centered_meshes.append(deepcopy(mesh).apply_transform(matrix))
 
     if "Rectum" in organs:
-        mesh = trimesh.load_mesh("137_rectum\\rectum{}.obj".format(timestamp))
+        mesh = trimesh.load_mesh(FILEPATH+"{}\\rectum\\rectum{}.obj".format(patient, timestamp))
         meshes.append(mesh)
         centered_meshes.append(deepcopy(mesh).apply_transform(matrix))
 
