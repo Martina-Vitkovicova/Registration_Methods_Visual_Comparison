@@ -10,7 +10,7 @@ from copy import deepcopy
 from scipy.spatial.transform import Rotation as R
 
 FILEPATH = "C:\\Users\\vitko\\Desktop\\ProjetHCI\\Organs\\"
-PATH = "C:\\Users\\vitko\\Desktop\\ProjetHCI\\Bakalarka"
+PATH = "C:\\Users\\vitko\\Desktop\\ProjetHCI\\Organs\\"
 
 
 def import_obj(files):
@@ -265,30 +265,27 @@ def compute_prostate_center_distances():
     return distances
 
 
-def compute_distances_after_icp():
+def compute_distances_after_icp(patient):
     """
     Function that computes distances between aligned organs and their plan organs. Organs were aligned according to the
     icp transformation matrix computed from plan bones and bones in different timestamps
     :return: 2d list of distances in order: prostate, bladder, rectum
     """
-    plan_prostate_center = find_center_point(plan[1][0])
-    first_bladder_center = find_center_point(import_obj([PATH + "\\137_bladder\\bladder1.obj"])[0][0])
-    first_rectum_center = find_center_point(import_obj([PATH + "\\137_rectum\\rectum1.obj"])[0][0])
+    plan_prostate_center = find_center_point(import_obj([PATH + "{}\\prostate\\prostate_plan.obj".format(patient)])[0][0])
+    plan_bone = import_obj([PATH + "{}\\bones\\bones_plan.obj".format(patient)])
+    first_bladder_center = find_center_point(import_obj([PATH + "{}\\bladder\\bladder1.obj".format(patient)])[0][0])
+    first_rectum_center = find_center_point(import_obj([PATH + "{}\\rectum\\rectum1.obj".format(patient)])[0][0])
     distances = [[], [], []]
     keys = [numpy.array(plan_prostate_center), numpy.array(first_bladder_center), numpy.array(first_rectum_center)]
 
-    for bone, prostate, bladder, rectum in zip(os.listdir(PATH + "\\137_bones"),
-                                               os.listdir(PATH + "\\137_prostate"),
-                                               os.listdir(PATH + "\\137_bladder"),
-                                               os.listdir(PATH + "\\137_rectum")):
-
-        bone = import_obj([PATH + "\\137_bones\\{}".format(bone)])
-        prostate = import_obj([PATH + "\\137_prostate\\{}".format(prostate)])
-        bladder = import_obj([PATH + "\\137_bladder\\{}".format(bladder)])
-        rectum = import_obj([PATH + "\\137_rectum\\{}".format(rectum)])
+    for i in range(1, 14):
+        bone = import_obj([PATH + "{}\\bones\\bones{}.obj".format(patient, i)])
+        prostate = import_obj([PATH + "{}\\prostate\\prostate{}.obj".format(patient, i)])
+        bladder = import_obj([PATH + "{}\\bladder\\bladder{}.obj".format(patient, i)])
+        rectum = import_obj([PATH + "{}\\rectum\\rectum{}.obj".format(patient, i)])
         organs = [prostate, bladder, rectum]
 
-        transform_matrix = icp_transformation_matrices(bone[0][0], plan[0][0])
+        transform_matrix = icp_transformation_matrices(bone[0][0], plan_bone[0][0])
 
         for i in range(3):
             transf_organ = vertices_transformation(transform_matrix, [organs[i][0]])
@@ -298,19 +295,17 @@ def compute_distances_after_icp():
     return distances
 
 
-def compute_distances_after_centering():
-    plan_prostate_center = find_center_point(plan[1][0])
-    first_bladder_center = find_center_point(import_obj([PATH + "\\137_bladder\\bladder1.obj"])[0][0])
-    first_rectum_center = find_center_point(import_obj([PATH + "\\137_rectum\\rectum1.obj"])[0][0])
+def compute_distances_after_centering(patient):
+    plan_prostate_center = find_center_point(import_obj([PATH + "{}\\prostate\\prostate_plan.obj".format(patient)])[0][0])
+    first_bladder_center = find_center_point(import_obj([PATH + "{}\\bladder\\bladder1.obj".format(patient)])[0][0])
+    first_rectum_center = find_center_point(import_obj([PATH + "{}\\rectum\\rectum1.obj".format(patient)])[0][0])
     distances = [[], [], []]
     keys = [numpy.array(plan_prostate_center), numpy.array(first_bladder_center), numpy.array(first_rectum_center)]
 
-    for prostate, bladder, rectum in zip(os.listdir(PATH + "\\137_prostate"),
-                                         os.listdir(PATH + "\\137_bladder"),
-                                         os.listdir(PATH + "\\137_rectum")):
-        prostate = import_obj([PATH + "\\137_prostate\\{}".format(prostate)])
-        bladder = import_obj([PATH + "\\137_bladder\\{}".format(bladder)])
-        rectum = import_obj([PATH + "\\137_rectum\\{}".format(rectum)])
+    for i in range(1, 14):
+        prostate = import_obj([PATH + "{}\\prostate\\prostate{}.obj".format(patient, i)])
+        bladder = import_obj([PATH + "{}\\bladder\\bladder{}.obj".format(patient, i)])
+        rectum = import_obj([PATH + "{}\\rectum\\rectum{}.obj".format(patient, i)])
         organs = [prostate, bladder, rectum]
 
         transform_matrix = create_translation_matrix(plan_prostate_center, find_center_point(prostate[0][0]))

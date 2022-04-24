@@ -56,8 +56,7 @@ def main():
 
             dcc.Graph(id="main-graph", style={'display': 'inline-block', "padding": "20px 30px 0px 40px"}),
 
-            dcc.Graph(id="organs-icp", figure=create_distances_after_icp(),
-                      style={'display': 'inline-block', "padding": "30px 30px 30px 40px"})]),
+            dcc.Graph(id="organs-icp", style={'display': 'inline-block', "padding": "30px 30px 30px 40px"})]),
 
 
         html.Div(className='six columns', children=[
@@ -79,8 +78,7 @@ def main():
                         dcc.Slider(min=0, max=1, value=0.5, id="z-slice-slider", marks=None)],
                              style={'width': '80%', 'display': 'inline-block', "padding": "5px 0px 0px 25px"})])]),
 
-            dcc.Graph(id="organs-center", figure=create_distances_after_centering(),
-                      style={'display': 'inline-block', "padding": "30px 30px 30px 0px"})])])
+            dcc.Graph(id="organs-center", style={'display': 'inline-block', "padding": "30px 30px 30px 0px"})])])
 
 
 @app.callback(
@@ -163,8 +161,8 @@ def get_meshes_after_centering(timestamp, objects, patient):
 
 
 def timestamp_click_data(icp_click_data, center_click_data):
-    icp_click_data = int(icp_click_data["points"][0]["x"]) + 1 if icp_click_data is not None else 1
-    center_click_data = int(center_click_data["points"][0]["x"]) + 1 if center_click_data is not None else 1
+    icp_click_data = int(icp_click_data["points"][0]["x"]) if icp_click_data is not None else 1
+    center_click_data = int(center_click_data["points"][0]["x"]) if center_click_data is not None else 1
 
     input_id = callback_context.triggered[0]['prop_id'].split('.')[0]
     timestamp = 1
@@ -241,10 +239,17 @@ def selected_organs_slices(matrix, organs, timestamp, patient):
     return meshes
 
 
-def create_slice(mesh, slice_slider, min_val, max_val, plane):
+def create_slice(mesh, slice_slider, min_val, max_val, plane_origin, plane_normal, axis):
     slope = (max_val - 2.5) - (min_val + 0.5)
-    output_x = (min_val + 0.5) + slope * slice_slider
-    axis_slice = mesh.section(plane_origin=[output_x, mesh.centroid[1], mesh.centroid[2]], plane_normal=plane)
+
+    if axis == "x":
+        plane_origin[0] = (min_val + 0.5) + slope * slice_slider
+    elif axis == "y":
+        plane_origin[1] = (min_val + 0.5) + slope * slice_slider
+    else:
+        plane_origin[2] = (min_val + 0.5) + slope * slice_slider
+
+    axis_slice = mesh.section(plane_origin=plane_origin, plane_normal=plane_normal)
     ordered_slice = order_slice_vertices(axis_slice.vertices, axis_slice.vertex_nodes)
     i, j, k = np.array(ordered_slice).T
 
@@ -256,12 +261,14 @@ def create_slice(mesh, slice_slider, min_val, max_val, plane):
 def create_x_slice(slice_slider, centered_meshes, icp_meshes, fig):
     if centered_meshes:
         for mesh in centered_meshes:
-            _, x, y = create_slice(mesh, slice_slider, mesh.bounds[0][0], mesh.bounds[1][0], [1, 0, 0])
+            _, x, y = create_slice(mesh, slice_slider, mesh.bounds[0][0], mesh.bounds[1][0],
+                                   [0, mesh.centroid[1], mesh.centroid[2]], [1, 0, 0], "x")
             fig.add_trace(go.Scatter(x=x, y=y, line=go.scatter.Line(color="orange")))
 
     if icp_meshes:
         for mesh in icp_meshes:
-            _, x, y = create_slice(mesh, slice_slider, mesh.bounds[0][0], mesh.bounds[1][0], [1, 0, 0])
+            _, x, y = create_slice(mesh, slice_slider, mesh.bounds[0][0], mesh.bounds[1][0],
+                                   [0, mesh.centroid[1], mesh.centroid[2]], [1, 0, 0], "x")
             fig.add_trace(go.Scatter(x=x, y=y, line=go.scatter.Line(color="#1F77B4")))
 
     fig.update_xaxes(constrain="domain")
@@ -273,12 +280,14 @@ def create_x_slice(slice_slider, centered_meshes, icp_meshes, fig):
 def create_y_slice(slice_slider, centered_meshes, icp_meshes, fig):
     if centered_meshes:
         for mesh in centered_meshes:
-            x, _, y = create_slice(mesh, slice_slider, mesh.bounds[0][1], mesh.bounds[1][1], [0, 1, 0])
+            x, _, y = create_slice(mesh, slice_slider, mesh.bounds[0][1], mesh.bounds[1][1],
+                                   [mesh.centroid[0], 0, mesh.centroid[2]], [0, 1, 0], "Y")
             fig.add_trace(go.Scatter(x=x, y=y, line=go.scatter.Line(color="orange")))
 
     if icp_meshes:
         for mesh in icp_meshes:
-            x, _, y = create_slice(mesh, slice_slider, mesh.bounds[0][1], mesh.bounds[1][1], [0, 1, 0])
+            x, _, y = create_slice(mesh, slice_slider, mesh.bounds[0][1], mesh.bounds[1][1],
+                                   [mesh.centroid[0], 0, mesh.centroid[2]], [0, 1, 0], "y")
             fig.add_trace(go.Scatter(x=x, y=y, line=go.scatter.Line(color="#1F77B4")))
 
     fig.update_xaxes(constrain="domain")
@@ -290,12 +299,14 @@ def create_y_slice(slice_slider, centered_meshes, icp_meshes, fig):
 def create_z_slice(slice_slider, centered_meshes, icp_meshes, fig):
     if centered_meshes:
         for mesh in centered_meshes:
-            x, y, _ = create_slice(mesh, slice_slider, mesh.bounds[0][2], mesh.bounds[1][2], [0, 0, 1])
+            x, y, _ = create_slice(mesh, slice_slider, mesh.bounds[0][2], mesh.bounds[1][2],
+                                   [mesh.centroid[0], mesh.centroid[1], 0], [0, 0, 1], "z")
             fig.add_trace(go.Scatter(x=x, y=y, line=go.scatter.Line(color="orange")))
 
     if icp_meshes:
         for mesh in icp_meshes:
-            x, y, _ = create_slice(mesh, slice_slider, mesh.bounds[0][2], mesh.bounds[1][2], [0, 0, 1])
+            x, y, _ = create_slice(mesh, slice_slider, mesh.bounds[0][2], mesh.bounds[1][2],
+                                   [mesh.centroid[0], mesh.centroid[1], 0], [0, 0, 1], "z")
             fig.add_trace(go.Scatter(x=x, y=y, line=go.scatter.Line(color="#1F77B4")))
 
     fig.update_xaxes(constrain="domain")
@@ -304,8 +315,11 @@ def create_z_slice(slice_slider, centered_meshes, icp_meshes, fig):
     return fig
 
 
-def create_distances_after_icp():
-    distances = Project_2.compute_distances_after_icp()
+@app.callback(
+    Output("organs-icp", "figure"),
+    Input("patient-dropdown", "value"))
+def create_distances_after_icp(patient):
+    distances = Project_2.compute_distances_after_icp(patient)
     prostate, bladder, rectum = distances[0], distances[1], distances[2]
 
     layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)', margin=dict(t=100, b=70),
@@ -313,9 +327,9 @@ def create_distances_after_icp():
                        title=dict(text="Distances of icp aligned organs and the plan organs",
                                   font=dict(size=18, color='lightgrey')))
     fig = go.Figure(layout=layout)
-    fig.add_trace(go.Scatter(x=np.array(range(0, 13)), y=prostate, mode="lines+markers", name="Prostate"))
-    fig.add_trace(go.Scatter(x=np.array(range(0, 13)), y=bladder, mode="lines+markers", name="Bladder"))
-    fig.add_trace(go.Scatter(x=np.array(range(0, 13)), y=rectum, mode="lines+markers", name="Rectum"))
+    fig.add_trace(go.Scatter(x=np.array(range(1, 14)), y=prostate, mode="lines+markers", name="Prostate"))
+    fig.add_trace(go.Scatter(x=np.array(range(1, 14)), y=bladder, mode="lines+markers", name="Bladder"))
+    fig.add_trace(go.Scatter(x=np.array(range(1, 14)), y=rectum, mode="lines+markers", name="Rectum"))
     fig.update_xaxes(title_text="Timestamp", tick0=0, dtick=1)
     fig.update_yaxes(title_text="Distance", tick0=0, dtick=2)
     fig.update_layout(title_x=0.5)
@@ -323,8 +337,11 @@ def create_distances_after_icp():
     return fig
 
 
-def create_distances_after_centering():
-    distances = Project_2.compute_distances_after_centering()
+@app.callback(
+    Output("organs-center", "figure"),
+    Input("patient-dropdown", "value"))
+def create_distances_after_centering(patient):
+    distances = Project_2.compute_distances_after_centering(patient)
     prostate, bladder, rectum = distances[0], distances[1], distances[2]
 
     layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)', margin=dict(t=100, b=70),
@@ -332,9 +349,9 @@ def create_distances_after_centering():
                        title=dict(text="Distances of the centered organs and the plan organs",
                                   font=dict(size=18, color='lightgrey')))
     fig = go.Figure(layout=layout)
-    fig.add_trace(go.Scatter(x=np.array(range(0, 13)), y=prostate, mode="lines+markers", name="Prostate"))
-    fig.add_trace(go.Scatter(x=np.array(range(0, 13)), y=bladder, mode="lines+markers", name="Bladder"))
-    fig.add_trace(go.Scatter(x=np.array(range(0, 13)), y=rectum, mode="lines+markers", name="Rectum"))
+    fig.add_trace(go.Scatter(x=np.array(range(1, 14)), y=prostate, mode="lines+markers", name="Prostate"))
+    fig.add_trace(go.Scatter(x=np.array(range(1, 14)), y=bladder, mode="lines+markers", name="Bladder"))
+    fig.add_trace(go.Scatter(x=np.array(range(1, 14)), y=rectum, mode="lines+markers", name="Rectum"))
     fig.update_xaxes(title_text="Timestamp", tick0=0, dtick=1)
     fig.update_yaxes(title_text="Distance", tick0=0, dtick=2)
     fig.update_layout(title_x=0.5)
