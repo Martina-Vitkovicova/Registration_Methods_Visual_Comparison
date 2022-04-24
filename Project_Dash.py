@@ -32,56 +32,47 @@ def order_slice_vertices(vertices, indices):
 
 
 def main():
-    """
-    main function
-    """
     app.layout = html.Div(className="row", children=[
         html.Div(className='six columns', children=[
             html.H6("Select the patient:",
-                    style={'display': 'inline-block', "padding": "20px 20px 0px 45px"}),
+                    style={'display': 'inline-block', "padding": "20px 101px 0px 45px"}),
 
-            dcc.Dropdown(options=["137", "146", "148", "198", "489", "579"], value="137",
-                         id="patient-dropdown",
-                         style={'display': 'inline-block', "font-size": "18px", "padding": "20px 100px 0px 25px"}),
+            dcc.Dropdown(options=["137", "146", "148", "198", "489", "579"], value="137", searchable=False,
+                         id="patient-dropdown", style={'display': 'inline-block', "width": "80px", "font-size": "16px",
+                                                       "padding": "0px 80px 0px 85px"}),
 
             html.H6("Select the method of alignment:",
                     style={'display': 'inline-block', "padding": "0px 50px 0px 45px"}),
 
             dcc.Checklist(options=["ICP", "Center point"], value=["ICP"], inline=True, id="alignment-checklist",
-                          style={'display': 'inline-block', "font-size": "18px", "padding": "0px 100px 0px 45px"}),
+                          style={'display': 'inline-block', "font-size": "18px", "padding": "0px 100px 0px 12px"}),
 
-            html.H6("Select organs/bones you want to see:",
-                    style={'display': 'inline-block', "padding": "0px 50px 0px 45px"}),
+            html.H6("Select the visibility of organs/bones:",
+                    style={'display': 'inline-block', "padding": "0px 0px 0px 45px"}),
 
             dcc.Checklist(options=["Bones", "Prostate", "Bladder", "Rectum"], value=["Prostate"], inline=True,
                           id="organs-checklist",
-                          style={'display': 'inline-block', "font-size": "18px", "padding": "0px 100px 0px 45px"}),
+                          style={'display': 'inline-block', "font-size": "18px", "padding": "0px 0px 0px 25px"}),
 
-            dcc.Graph(id="main-graph", style={'display': 'inline-block', "padding": "30px 30px 0px 40px"}),
+            dcc.Graph(id="main-graph", style={'display': 'inline-block', "padding": "20px 30px 0px 40px"}),
 
             dcc.Graph(id="organs-icp", figure=create_distances_after_icp(),
                       style={'display': 'inline-block', "padding": "30px 30px 30px 40px"})]),
 
+
         html.Div(className='six columns', children=[
-            html.H6("Select organs for slicing:",
-                    style={'display': 'inline-block', "padding": "20px 100px 0px 150px"}),
-
-            dcc.Checklist(options=["Prostate", "Bladder", "Rectum"], value=["Prostate"], inline=True,
-                          id="slices-checklist",
-                          style={'display': 'inline-block', "font-size": "18px", "padding": "0px 100px 0px 45px"}),
-
             html.Div(className="row", children=[
                 html.Div(className='six columns', children=[
-                    dcc.Graph(id="x-slice-graph", style={'display': 'inline-block', "padding": "30px 0px 10px 0px"}),
+                    dcc.Graph(id="x-slice-graph", style={'display': 'inline-block', "padding": "45px 0px 10px 0px"}),
 
                     dcc.Graph(id="z-slice-graph", style={'display': 'inline-block', "padding": "0px 0px 0px 0px"})]),
 
                 html.Div(className='six columns', children=[
-                    dcc.Graph(id="y-slice-graph", style={'display': 'inline-block', "padding": "30px 0px 10px 0px"}),
+                    dcc.Graph(id="y-slice-graph", style={'display': 'inline-block', "padding": "45px 0px 10px 0px"}),
 
                     html.Div(className="row", children=[
                         html.H6("X axes slice:", style={'display': 'inline-block', "padding": "5px 0px 0px 50px"}),
-                        dcc.Slider(min=0, max=1, value=0.5, id="x-slice-slider", marks=None),
+                        dcc.Slider(min=0, max=1, value=0.5, id="x-slice-slider", marks=None, updatemode="drag"),
                         html.H6("Y axes slice:", style={'display': 'inline-block', "padding": "5px 0px 0px 50px"}),
                         dcc.Slider(min=0, max=1, value=0.5, id="y-slice-slider", marks=None),
                         html.H6("Z axes slice:", style={'display': 'inline-block', "padding": "5px 0px 0px 50px"}),
@@ -108,7 +99,7 @@ def update_3dgraph(patient, alignment_checklist, icp_click_data, center_click_da
 
     camera = dict(up=dict(x=0, y=0, z=1), center=dict(x=0, y=0, z=0), eye=dict(x=0.5, y=-2, z=0))
     layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)', height=520, width=680,
-                       plot_bgcolor='rgba(50,50,50,1)', margin=dict(l=40, r=40, t=40, b=40), showlegend=True)
+                       plot_bgcolor='rgba(50,50,50,1)', margin=dict(l=40, r=40, t=60, b=40), showlegend=True)
     fig = go.Figure(layout=layout)
     fig.update_layout(scene_camera=camera)
 
@@ -126,6 +117,8 @@ def update_3dgraph(patient, alignment_checklist, icp_click_data, center_click_da
                                                                                   facenormalsepsilon=1e-15,
                                                                                   vertexnormalsepsilon=1e-15))
         fig.add_trace(mesh)
+    fig.update_layout(title_text="Patient {}, timestamp number {}".format(patient, timestamp), title_x=0.5,
+                      title_y=0.95)
 
     return fig
 
@@ -193,7 +186,7 @@ def timestamp_click_data(icp_click_data, center_click_data):
     Input("z-slice-slider", "value"),
     Input("organs-icp", "clickData"),
     Input("organs-center", "clickData"),
-    Input("slices-checklist", "value"),
+    Input("organs-checklist", "value"),
     Input("patient-dropdown", "value"),
     Input("alignment-checklist", "value"))
 def create_graph_slices(x_slider, y_slider, z_slider, icp_click_data, center_click_data, organs, patient, method):
@@ -216,7 +209,7 @@ def create_graph_slices(x_slider, y_slider, z_slider, icp_click_data, center_cli
         icp_meshes = selected_organs_slices(icp_matrix, organs, timestamp, patient)
 
     for i in range(3):
-        layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)', height=300,
+        layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)', height=320,
                            width=340, plot_bgcolor='rgba(50,50,50,1)', margin=dict(l=30, r=20, t=60, b=40),
                            showlegend=False, title=dict(text=names[i]))
         fig = go.Figure(layout=layout)
