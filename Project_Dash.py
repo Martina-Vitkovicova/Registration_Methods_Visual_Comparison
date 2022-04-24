@@ -5,7 +5,6 @@ import numpy as np
 import plotly.graph_objects as go
 import Project_2
 
-
 FILEPATH = "C:\\Users\\vitko\\Desktop\\ProjetHCI\\Organs\\"
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
@@ -39,11 +38,11 @@ def main():
     app.layout = html.Div(className="row", children=[
         html.Div(className='six columns', children=[
             html.H6("Select the patient:",
-                    style={'display': 'inline-block', "padding": "20px 40px 0px 45px"}),
+                    style={'display': 'inline-block', "padding": "20px 20px 0px 45px"}),
 
-            dcc.RadioItems(options=["137", "146", "148", "198", "489", "579"], value="137", inline=True,
-                           id="patient-radioitems",
-                           style={'display': 'inline-block', "font-size": "18px", "padding": "0px 100px 0px 45px"}),
+            dcc.Dropdown(options=["137", "146", "148", "198", "489", "579"], value="137",
+                         id="patient-dropdown",
+                         style={'display': 'inline-block', "font-size": "18px", "padding": "20px 100px 0px 25px"}),
 
             html.H6("Select the method of alignment:",
                     style={'display': 'inline-block', "padding": "0px 50px 0px 45px"}),
@@ -62,7 +61,6 @@ def main():
 
             dcc.Graph(id="organs-icp", figure=create_distances_after_icp(),
                       style={'display': 'inline-block', "padding": "30px 30px 30px 40px"})]),
-
 
         html.Div(className='six columns', children=[
             html.H6("Select organs for slicing:",
@@ -96,7 +94,7 @@ def main():
 
 @app.callback(
     Output("main-graph", "figure"),
-    Input("patient-radioitems", "value"),
+    Input("patient-dropdown", "value"),
     Input("alignment-checklist", "value"),
     Input("organs-icp", "clickData"),
     Input("organs-center", "clickData"),
@@ -123,7 +121,10 @@ def update_3dgraph(patient, alignment_checklist, icp_click_data, center_click_da
 
     for mesh in meshes:
         mesh.update(cmin=-7, lightposition=dict(x=100, y=200, z=0), lighting=dict(ambient=0.4, diffuse=1,
-                    fresnel=0.1, specular=1, roughness=0.5, facenormalsepsilon=1e-15, vertexnormalsepsilon=1e-15))
+                                                                                  fresnel=0.1, specular=1,
+                                                                                  roughness=0.5,
+                                                                                  facenormalsepsilon=1e-15,
+                                                                                  vertexnormalsepsilon=1e-15))
         fig.add_trace(mesh)
 
     return fig
@@ -133,20 +134,20 @@ def import_selected_organs(organs, timestamp, patient):
     objects = []
 
     if "Bones" in organs:
-        objects.extend(Project_2.import_obj([FILEPATH+"{}\\bones\\bones{}.obj".format(patient, timestamp)]))
+        objects.extend(Project_2.import_obj([FILEPATH + "{}\\bones\\bones{}.obj".format(patient, timestamp)]))
     if "Prostate" in organs:
-        objects.extend(Project_2.import_obj([FILEPATH+"{}\\prostate\\prostate{}.obj".format(patient, timestamp)]))
+        objects.extend(Project_2.import_obj([FILEPATH + "{}\\prostate\\prostate{}.obj".format(patient, timestamp)]))
     if "Bladder" in organs:
-        objects.extend(Project_2.import_obj([FILEPATH+"{}\\bladder\\bladder{}.obj".format(patient,  timestamp)]))
+        objects.extend(Project_2.import_obj([FILEPATH + "{}\\bladder\\bladder{}.obj".format(patient, timestamp)]))
     if "Rectum" in organs:
-        objects.extend(Project_2.import_obj([FILEPATH+"{}\\rectum\\rectum{}.obj".format(patient, timestamp)]))
+        objects.extend(Project_2.import_obj([FILEPATH + "{}\\rectum\\rectum{}.obj".format(patient, timestamp)]))
 
     return objects
 
 
 def get_meshes_after_icp(timestamp, objects, patient):
-    plan_bones = Project_2.import_obj([FILEPATH+"{}\\bones\\bones_plan.obj".format(patient)])
-    bones = Project_2.import_obj([FILEPATH+"{}\\bones\\bones{}.obj".format(patient, timestamp)])
+    plan_bones = Project_2.import_obj([FILEPATH + "{}\\bones\\bones_plan.obj".format(patient)])
+    bones = Project_2.import_obj([FILEPATH + "{}\\bones\\bones{}.obj".format(patient, timestamp)])
 
     transform_matrix = Project_2.icp_transformation_matrices(bones[0][0], plan_bones[0][0], False)
     transfr_objects = Project_2.vertices_transformation(transform_matrix, deepcopy(objects))
@@ -156,10 +157,10 @@ def get_meshes_after_icp(timestamp, objects, patient):
 
 
 def get_meshes_after_centering(timestamp, objects, patient):
-    prostate = Project_2.import_obj([FILEPATH+"{}\\prostate\\prostate{}.obj".format(patient, timestamp)])
+    prostate = Project_2.import_obj([FILEPATH + "{}\\prostate\\prostate{}.obj".format(patient, timestamp)])
 
     plan_center = Project_2.find_center_point(Project_2.import_obj(
-        [FILEPATH+"{}\\prostate\\prostate_plan.obj".format(patient)])[0][0])
+        [FILEPATH + "{}\\prostate\\prostate_plan.obj".format(patient)])[0][0])
     other_center = Project_2.find_center_point(prostate[0][0])
     center_matrix = Project_2.create_translation_matrix(plan_center, other_center)
     center_transfr_objects = Project_2.vertices_transformation(center_matrix, deepcopy(objects))
@@ -193,19 +194,26 @@ def timestamp_click_data(icp_click_data, center_click_data):
     Input("organs-icp", "clickData"),
     Input("organs-center", "clickData"),
     Input("slices-checklist", "value"),
-    Input("patient-radioitems", "value"))
-def create_graph_slices(x_slider, y_slider, z_slider, icp_click_data, center_click_data, organs, patient):
-    figures = []
+    Input("patient-dropdown", "value"),
+    Input("alignment-checklist", "value"))
+def create_graph_slices(x_slider, y_slider, z_slider, icp_click_data, center_click_data, organs, patient, method):
+    figures, centered_meshes, icp_meshes = [], [], []
     names = ["X axis slice", "Y axis slice", "Z axis slice"]
     timestamp = timestamp_click_data(icp_click_data, center_click_data)
 
-    key = trimesh.load_mesh(FILEPATH+"{}\\prostate\\prostate_plan.obj".format(patient))
-    prostate = trimesh.load_mesh(FILEPATH+"{}\\prostate\\prostate{}.obj".format(patient, timestamp))
-    key_center = Project_2.find_center_point(key.vertices)
-    other_center = Project_2.find_center_point(prostate.vertices)
-    matrix = Project_2.create_translation_matrix(key_center, other_center)
+    if "Center point" in method:
+        plan_prostate = trimesh.load_mesh(FILEPATH + "{}\\prostate\\prostate_plan.obj".format(patient))
+        prostate = trimesh.load_mesh(FILEPATH + "{}\\prostate\\prostate{}.obj".format(patient, timestamp))
+        key_center = Project_2.find_center_point(plan_prostate.vertices)
+        other_center = Project_2.find_center_point(prostate.vertices)
+        center_matrix = Project_2.create_translation_matrix(key_center, other_center)
+        centered_meshes = selected_organs_slices(center_matrix, organs, timestamp, patient)
 
-    meshes, centered_meshes = selected_organs_slices(matrix, organs, timestamp, prostate, patient)
+    if "ICP" in method:
+        plan_bones = Project_2.import_obj([FILEPATH + "{}\\bones\\bones_plan.obj".format(patient)])
+        bones = Project_2.import_obj([FILEPATH + "{}\\bones\\bones{}.obj".format(patient, timestamp)])
+        icp_matrix = Project_2.icp_transformation_matrices(bones[0][0], plan_bones[0][0], False)
+        icp_meshes = selected_organs_slices(icp_matrix, organs, timestamp, patient)
 
     for i in range(3):
         layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)', height=300,
@@ -215,68 +223,53 @@ def create_graph_slices(x_slider, y_slider, z_slider, icp_click_data, center_cli
         fig.update_layout(title_x=0.5)
         figures.append(fig)
 
-    x_fig = create_x_slice(x_slider, meshes, centered_meshes, figures[0])
-    y_fig = create_y_slice(y_slider, meshes, centered_meshes, figures[1])
-    z_fig = create_z_slice(z_slider, meshes, centered_meshes, figures[2])
+    x_fig = create_x_slice(x_slider, centered_meshes, icp_meshes, figures[0])
+    y_fig = create_y_slice(y_slider, centered_meshes, icp_meshes, figures[1])
+    z_fig = create_z_slice(z_slider,  centered_meshes, icp_meshes, figures[2])
 
     return x_fig, y_fig, z_fig
 
 
-def selected_organs_slices(matrix, organs, timestamp, prostate, patient):
-    meshes, centered_meshes = [], []
+def selected_organs_slices(matrix, organs, timestamp, patient):
+    meshes = []
 
     if "Prostate" in organs:
-        meshes.append(prostate)
-        centered_meshes.append(deepcopy(prostate).apply_transform(matrix))
+        mesh = trimesh.load_mesh(FILEPATH + "{}\\prostate\\prostate{}.obj".format(patient, timestamp))
+        meshes.append(deepcopy(mesh).apply_transform(matrix))
 
     if "Bladder" in organs:
-        mesh = trimesh.load_mesh(FILEPATH+"{}\\bladder\\bladder{}.obj".format(patient, timestamp))
-        meshes.append(mesh)
-        centered_meshes.append(deepcopy(mesh).apply_transform(matrix))
+        mesh = trimesh.load_mesh(FILEPATH + "{}\\bladder\\bladder{}.obj".format(patient, timestamp))
+        meshes.append(deepcopy(mesh).apply_transform(matrix))
 
     if "Rectum" in organs:
-        mesh = trimesh.load_mesh(FILEPATH+"{}\\rectum\\rectum{}.obj".format(patient, timestamp))
-        meshes.append(mesh)
-        centered_meshes.append(deepcopy(mesh).apply_transform(matrix))
+        mesh = trimesh.load_mesh(FILEPATH + "{}\\rectum\\rectum{}.obj".format(patient, timestamp))
+        meshes.append(deepcopy(mesh).apply_transform(matrix))
 
-    return meshes, centered_meshes
-
-
-def create_x_slice(slice_slider, meshes, centered_meshes, fig):
-    for mesh, centered_mesh in zip(meshes, centered_meshes):
-        slope = (mesh.bounds[1][0] - 2.5) - (mesh.bounds[0][0] + 0.5)
-        output_x = (mesh.bounds[0][0] + 0.5) + slope * slice_slider
-        axis_slice = mesh.section(plane_origin=[output_x, mesh.centroid[1], mesh.centroid[2]], plane_normal=[1, 0, 0])
-        ordered_slice = order_slice_vertices(axis_slice.vertices, axis_slice.vertex_nodes)
-        _, i, j = np.array(ordered_slice).T
-        fig.add_trace(go.Scatter(x=i, y=j, line=go.scatter.Line(color="red")))
-
-        centered_slice = centered_mesh.section(plane_origin=[output_x, centered_mesh.centroid[1],
-                                                             centered_mesh.centroid[2]], plane_normal=[1, 0, 0])
-        centered_ordered_slice = order_slice_vertices(centered_slice.vertices, centered_slice.vertex_nodes)
-        _, k, l = np.array(centered_ordered_slice).T
-        fig.add_trace(go.Scatter(x=k, y=l, line=go.scatter.Line(color="orange")))
-
-    fig.update_xaxes(constrain="domain")
-    fig.update_yaxes(scaleanchor="x")
-
-    return fig
+    return meshes
 
 
-def create_y_slice(slice_slider, meshes, centered_meshes, fig):
-    for mesh, centered_mesh in zip(meshes, centered_meshes):
-        slope = (mesh.bounds[1][1] - 2.5) - (mesh.bounds[0][1] + 0.5)
-        output_y = (mesh.bounds[0][1] + 0.5) + slope * slice_slider
-        axis_slice = mesh.section(plane_origin=[mesh.centroid[0], output_y, mesh.centroid[2]], plane_normal=[0, 1, 0])
-        ordered_slice = order_slice_vertices(axis_slice.vertices, axis_slice.vertex_nodes)
-        i, _, j = np.array(ordered_slice).T
-        fig.add_trace(go.Scatter(x=i, y=j, line=go.scatter.Line(color="yellow")))
+def create_slice(mesh, slice_slider, min_val, max_val, plane):
+    slope = (max_val - 2.5) - (min_val + 0.5)
+    output_x = (min_val + 0.5) + slope * slice_slider
+    axis_slice = mesh.section(plane_origin=[output_x, mesh.centroid[1], mesh.centroid[2]], plane_normal=plane)
+    ordered_slice = order_slice_vertices(axis_slice.vertices, axis_slice.vertex_nodes)
+    i, j, k = np.array(ordered_slice).T
 
-        centered_slice = centered_mesh.section(plane_origin=[centered_mesh.centroid[0], output_y,
-                                                             centered_mesh.centroid[2]], plane_normal=[0, 1, 0])
-        centered_ordered_slice = order_slice_vertices(centered_slice.vertices, centered_slice.vertex_nodes)
-        k, _, l = np.array(centered_ordered_slice).T
-        fig.add_trace(go.Scatter(x=k, y=l, line=go.scatter.Line(color="lightgreen")))
+    return i, j, k
+
+# TODO: combine 3 axis slices functions to one
+
+
+def create_x_slice(slice_slider, centered_meshes, icp_meshes, fig):
+    if centered_meshes:
+        for mesh in centered_meshes:
+            _, x, y = create_slice(mesh, slice_slider, mesh.bounds[0][0], mesh.bounds[1][0], [1, 0, 0])
+            fig.add_trace(go.Scatter(x=x, y=y, line=go.scatter.Line(color="orange")))
+
+    if icp_meshes:
+        for mesh in icp_meshes:
+            _, x, y = create_slice(mesh, slice_slider, mesh.bounds[0][0], mesh.bounds[1][0], [1, 0, 0])
+            fig.add_trace(go.Scatter(x=x, y=y, line=go.scatter.Line(color="#1F77B4")))
 
     fig.update_xaxes(constrain="domain")
     fig.update_yaxes(scaleanchor="x")
@@ -284,20 +277,33 @@ def create_y_slice(slice_slider, meshes, centered_meshes, fig):
     return fig
 
 
-def create_z_slice(slice_slider, meshes, centered_meshes, fig):
-    for mesh, centered_mesh in zip(meshes, centered_meshes):
-        slope = (mesh.bounds[1][2] - 2.5) - (mesh.bounds[0][2] + 0.5)
-        output_z = (mesh.bounds[0][2] + 0.5) + slope * slice_slider
-        axis_slice = mesh.section(plane_origin=[mesh.centroid[0], mesh.centroid[1], output_z], plane_normal=[0, 0, 1])
-        ordered_slice = order_slice_vertices(axis_slice.vertices, axis_slice.vertex_nodes)
-        i, j, _ = np.array(ordered_slice).T
-        fig.add_trace(go.Scatter(x=j, y=i, line=go.scatter.Line(color="blue")))
+def create_y_slice(slice_slider, centered_meshes, icp_meshes, fig):
+    if centered_meshes:
+        for mesh in centered_meshes:
+            x, _, y = create_slice(mesh, slice_slider, mesh.bounds[0][1], mesh.bounds[1][1], [0, 1, 0])
+            fig.add_trace(go.Scatter(x=x, y=y, line=go.scatter.Line(color="orange")))
 
-        centered_slice = centered_mesh.section(plane_origin=[centered_mesh.centroid[0], centered_mesh.centroid[1],
-                                                             output_z], plane_normal=[0, 0, 1])
-        centered_ordered_slice = order_slice_vertices(centered_slice.vertices, centered_slice.vertex_nodes)
-        k, l, _ = np.array(centered_ordered_slice).T
-        fig.add_trace(go.Scatter(x=l, y=k, line=go.scatter.Line(color="purple")))
+    if icp_meshes:
+        for mesh in icp_meshes:
+            x, _, y = create_slice(mesh, slice_slider, mesh.bounds[0][1], mesh.bounds[1][1], [0, 1, 0])
+            fig.add_trace(go.Scatter(x=x, y=y, line=go.scatter.Line(color="#1F77B4")))
+
+    fig.update_xaxes(constrain="domain")
+    fig.update_yaxes(scaleanchor="x")
+
+    return fig
+
+
+def create_z_slice(slice_slider, centered_meshes, icp_meshes, fig):
+    if centered_meshes:
+        for mesh in centered_meshes:
+            x, y, _ = create_slice(mesh, slice_slider, mesh.bounds[0][2], mesh.bounds[1][2], [0, 0, 1])
+            fig.add_trace(go.Scatter(x=x, y=y, line=go.scatter.Line(color="orange")))
+
+    if icp_meshes:
+        for mesh in icp_meshes:
+            x, y, _ = create_slice(mesh, slice_slider, mesh.bounds[0][2], mesh.bounds[1][2], [0, 0, 1])
+            fig.add_trace(go.Scatter(x=x, y=y, line=go.scatter.Line(color="#1F77B4")))
 
     fig.update_xaxes(constrain="domain")
     fig.update_yaxes(scaleanchor="x")

@@ -24,7 +24,7 @@ def import_obj(files):
     return object_list
 
 
-def icp_transformation_matrices(other, key, print_out=True):
+def icp_transformation_matrices(other, key, print_out=False):
     """Create transformation matrix using icp algorithm from trimesh library"""
     matrix, transformed, _ = trimesh.registration.icp(other, key, scale=False)
     rotation_m = numpy.array([matrix[0][:3], matrix[1][:3], matrix[2][:3]])
