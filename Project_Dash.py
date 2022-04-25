@@ -1,6 +1,6 @@
 from copy import deepcopy
 import trimesh
-from dash import Dash, html, dcc, Output, Input, State, callback_context
+from dash import Dash, html, dcc, Output, Input, callback_context
 import numpy as np
 import plotly.graph_objects as go
 import Project_2
@@ -56,7 +56,9 @@ def main():
 
             dcc.Graph(id="main-graph", style={'display': 'inline-block', "padding": "20px 30px 0px 40px"}),
 
-            dcc.Graph(id="organs-icp", style={'display': 'inline-block', "padding": "30px 30px 30px 40px"})]),
+            dcc.Graph(id="organs-icp", style={'display': 'inline-block', "padding": "30px 30px 30px 40px"}),
+
+            dcc.Graph(id="alignment-differences", style={'display': 'inline-block', "padding": "10px 30px 30px 40px"})]),
 
 
         html.Div(className='six columns', children=[
@@ -216,7 +218,7 @@ def create_graph_slices(x_slider, y_slider, z_slider, icp_click_data, center_cli
 
     x_fig = create_x_slice(x_slider, centered_meshes, icp_meshes, figures[0])
     y_fig = create_y_slice(y_slider, centered_meshes, icp_meshes, figures[1])
-    z_fig = create_z_slice(z_slider,  centered_meshes, icp_meshes, figures[2])
+    z_fig = create_z_slice(z_slider, centered_meshes, icp_meshes, figures[2])
 
     return x_fig, y_fig, z_fig
 
@@ -258,6 +260,16 @@ def create_slice(mesh, slice_slider, min_val, max_val, plane_origin, plane_norma
 # TODO: combine 3 axis slices functions to one
 
 
+def add_planes(point, normal):
+    d = -point.dot(normal)
+    xx, yy = np.meshgrid(range(10), range(10))
+    z = (-normal[0] * xx - normal[1] * yy - d) * 1. / normal[2]
+
+    fig = go.Surface(x=xx, y=yy, z=z)
+
+    return fig
+
+
 def create_x_slice(slice_slider, centered_meshes, icp_meshes, fig):
     if centered_meshes:
         for mesh in centered_meshes:
@@ -281,7 +293,7 @@ def create_y_slice(slice_slider, centered_meshes, icp_meshes, fig):
     if centered_meshes:
         for mesh in centered_meshes:
             x, _, y = create_slice(mesh, slice_slider, mesh.bounds[0][1], mesh.bounds[1][1],
-                                   [mesh.centroid[0], 0, mesh.centroid[2]], [0, 1, 0], "Y")
+                                   [mesh.centroid[0], 0, mesh.centroid[2]], [0, 1, 0], "y")
             fig.add_trace(go.Scatter(x=x, y=y, line=go.scatter.Line(color="orange")))
 
     if icp_meshes:
@@ -294,6 +306,8 @@ def create_y_slice(slice_slider, centered_meshes, icp_meshes, fig):
     fig.update_yaxes(scaleanchor="x")
 
     return fig
+
+# TODO: z axis slice not working with 146
 
 
 def create_z_slice(slice_slider, centered_meshes, icp_meshes, fig):
@@ -319,8 +333,8 @@ def create_z_slice(slice_slider, centered_meshes, icp_meshes, fig):
     Output("organs-icp", "figure"),
     Input("patient-dropdown", "value"))
 def create_distances_after_icp(patient):
-    distances = Project_2.compute_distances_after_icp(patient)
-    prostate, bladder, rectum = distances[0], distances[1], distances[2]
+    distances_icp = Project_2.compute_distances_after_icp(patient)
+    prostate, bladder, rectum = distances_icp[0], distances_icp[1], distances_icp[2]
 
     layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)', margin=dict(t=100, b=70),
                        plot_bgcolor='rgba(70,70,70,1)', width=680, height=350,
@@ -341,12 +355,36 @@ def create_distances_after_icp(patient):
     Output("organs-center", "figure"),
     Input("patient-dropdown", "value"))
 def create_distances_after_centering(patient):
-    distances = Project_2.compute_distances_after_centering(patient)
-    prostate, bladder, rectum = distances[0], distances[1], distances[2]
+    distances_center = Project_2.compute_distances_after_centering(patient)
+    prostate, bladder, rectum = distances_center[0], distances_center[1], distances_center[2]
 
     layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)', margin=dict(t=100, b=70),
                        plot_bgcolor='rgba(70,70,70,1)', width=680, height=350,
                        title=dict(text="Distances of the centered organs and the plan organs",
+                                  font=dict(size=18, color='lightgrey')))
+    fig = go.Figure(layout=layout)
+    fig.add_trace(go.Scatter(x=np.array(range(1, 14)), y=prostate, mode="lines+markers", name="Prostate"))
+    fig.add_trace(go.Scatter(x=np.array(range(1, 14)), y=bladder, mode="lines+markers", name="Bladder"))
+    fig.add_trace(go.Scatter(x=np.array(range(1, 14)), y=rectum, mode="lines+markers", name="Rectum"))
+    fig.update_xaxes(title_text="Timestamp", tick0=0, dtick=1)
+    fig.update_yaxes(title_text="Distance", tick0=0, dtick=2)
+    fig.update_layout(title_x=0.5)
+
+    return fig
+
+
+@app.callback(
+    Output("alignment-differences", "figure"),
+    Input("patient-dropdown", "value"))
+def create_distances_between_alignments(patient):
+    distances_icp = Project_2.compute_distances_after_icp(patient)
+    distances_center = Project_2.compute_distances_after_centering(patient)
+    distances = np.array(distances_icp) - np.array(distances_center)
+    prostate, bladder, rectum = distances[0], distances[1], distances[2]
+
+    layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)', margin=dict(t=100, b=70),
+                       plot_bgcolor='rgba(70,70,70,1)', width=680, height=350,
+                       title=dict(text="Difference of distances between two alignments",
                                   font=dict(size=18, color='lightgrey')))
     fig = go.Figure(layout=layout)
     fig.add_trace(go.Scatter(x=np.array(range(1, 14)), y=prostate, mode="lines+markers", name="Prostate"))
