@@ -404,6 +404,19 @@ def timer():
     end = time.time()
     print(end - start)
 
+
+def compute_average_distances(distances):
+    prostate, bladder, rectum = distances[0], distances[1], distances[2]
+    avrg_prostate = np.average(prostate)
+    avrg_bladder = np.average(bladder)
+    avrg_rectum = np.average(rectum)
+
+    return [avrg_prostate, avrg_bladder, avrg_rectum]
+
+
+
+
+
 # timer()
 
 # print(find_center_point(import_obj([PATH + "{}\\prostate\\prostate_plan.obj".format("137")])[0][0]))

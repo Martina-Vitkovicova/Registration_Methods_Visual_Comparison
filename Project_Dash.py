@@ -6,18 +6,22 @@ import plotly.graph_objects as go
 import Project_2
 
 FILEPATH = "C:\\Users\\vitko\\Desktop\\ProjetHCI\\Organs\\"
+PATIENTS = ["137", "146", "148", "198", "489", "579", "716", "722"]
+
+BLUE = "#636EFA"
+GREEN = "#EF553B"
+RED = "#00CC96"
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 app = Dash(__name__, external_stylesheets=external_stylesheets)
 
 
-def create_meshes_from_objs(objects, color_scale):
+def create_meshes_from_objs(objects, color):
     meshes = []
     for elem in objects:
         x, y, z = np.array(elem[0]).T
         i, j, k = np.array(elem[1]).T
-        pl_mesh = go.Mesh3d(x=x, y=y, z=z, colorscale=color_scale,
-                            intensity=z, flatshading=True, i=i, j=j, k=k, showscale=False, opacity=1)
+        pl_mesh = go.Mesh3d(x=x, y=y, z=z, color=color, flatshading=True, i=i, j=j, k=k, showscale=False, opacity=1)
         meshes.append(pl_mesh)
     return meshes
 
@@ -37,7 +41,7 @@ def main():
             html.H6("Select the patient:",
                     style={'display': 'inline-block', "padding": "20px 101px 0px 45px"}),
 
-            dcc.Dropdown(options=["137", "146", "148", "198", "489", "579"], value="137", searchable=False,
+            dcc.Dropdown(options=PATIENTS, value="137", searchable=False,
                          id="patient-dropdown", style={'display': 'inline-block', "width": "80px", "font-size": "16px",
                                                        "padding": "0px 80px 0px 85px"}),
 
@@ -58,7 +62,9 @@ def main():
 
             dcc.Graph(id="organs-icp", style={'display': 'inline-block', "padding": "30px 30px 30px 40px"}),
 
-            dcc.Graph(id="alignment-differences", style={'display': 'inline-block', "padding": "10px 30px 30px 40px"})]),
+            dcc.Graph(id="alignment-differences", style={"padding": "0px 60px 30px 60px"}),
+
+            dcc.Graph(figure=create_patients_icp(), style={'display': 'inline-block', "padding": "10px 30px 30px 40px"})]),
 
 
         html.Div(className='six columns', children=[
@@ -80,7 +86,9 @@ def main():
                         dcc.Slider(min=0, max=1, value=0.5, id="z-slice-slider", marks=None)],
                              style={'width': '80%', 'display': 'inline-block', "padding": "5px 0px 0px 25px"})])]),
 
-            dcc.Graph(id="organs-center", style={'display': 'inline-block', "padding": "30px 30px 30px 0px"})])])
+            dcc.Graph(id="organs-center", style={'display': 'inline-block', "padding": "30px 30px 30px 0px"}),
+
+            dcc.Graph(figure=create_patients_center(), style={'display': 'inline-block', "padding": "390px 30px 30px 0px"})])])
 
 
 @app.callback(
@@ -144,7 +152,7 @@ def get_meshes_after_icp(timestamp, objects, patient):
 
     transform_matrix = Project_2.icp_transformation_matrices(bones[0][0], plan_bones[0][0], False)
     transfr_objects = Project_2.vertices_transformation(transform_matrix, deepcopy(objects))
-    after_icp_meshes = create_meshes_from_objs(transfr_objects, "darkmint")
+    after_icp_meshes = create_meshes_from_objs(transfr_objects, "#1F77B4")
 
     return after_icp_meshes
 
@@ -157,7 +165,7 @@ def get_meshes_after_centering(timestamp, objects, patient):
     other_center = Project_2.find_center_point(prostate[0][0])
     center_matrix = Project_2.create_translation_matrix(plan_center, other_center)
     center_transfr_objects = Project_2.vertices_transformation(center_matrix, deepcopy(objects))
-    after_center_meshes = create_meshes_from_objs(center_transfr_objects, "peach")
+    after_center_meshes = create_meshes_from_objs(center_transfr_objects, "orange")
 
     return after_center_meshes
 
@@ -275,13 +283,13 @@ def create_x_slice(slice_slider, centered_meshes, icp_meshes, fig):
         for mesh in centered_meshes:
             _, x, y = create_slice(mesh, slice_slider, mesh.bounds[0][0], mesh.bounds[1][0],
                                    [0, mesh.centroid[1], mesh.centroid[2]], [1, 0, 0], "x")
-            fig.add_trace(go.Scatter(x=x, y=y, line=go.scatter.Line(color="orange")))
+            fig.add_trace(go.Scatter(x=x, y=y, line=go.scatter.Line(color="orange", width=3)))
 
     if icp_meshes:
         for mesh in icp_meshes:
             _, x, y = create_slice(mesh, slice_slider, mesh.bounds[0][0], mesh.bounds[1][0],
                                    [0, mesh.centroid[1], mesh.centroid[2]], [1, 0, 0], "x")
-            fig.add_trace(go.Scatter(x=x, y=y, line=go.scatter.Line(color="#1F77B4")))
+            fig.add_trace(go.Scatter(x=x, y=y, line=go.scatter.Line(color="#1F77B4", width=3)))
 
     fig.update_xaxes(constrain="domain")
     fig.update_yaxes(scaleanchor="x")
@@ -294,13 +302,13 @@ def create_y_slice(slice_slider, centered_meshes, icp_meshes, fig):
         for mesh in centered_meshes:
             x, _, y = create_slice(mesh, slice_slider, mesh.bounds[0][1], mesh.bounds[1][1],
                                    [mesh.centroid[0], 0, mesh.centroid[2]], [0, 1, 0], "y")
-            fig.add_trace(go.Scatter(x=x, y=y, line=go.scatter.Line(color="orange")))
+            fig.add_trace(go.Scatter(x=x, y=y, line=go.scatter.Line(color="orange", width=3)))
 
     if icp_meshes:
         for mesh in icp_meshes:
             x, _, y = create_slice(mesh, slice_slider, mesh.bounds[0][1], mesh.bounds[1][1],
                                    [mesh.centroid[0], 0, mesh.centroid[2]], [0, 1, 0], "y")
-            fig.add_trace(go.Scatter(x=x, y=y, line=go.scatter.Line(color="#1F77B4")))
+            fig.add_trace(go.Scatter(x=x, y=y, line=go.scatter.Line(color="#1F77B4", width=3)))
 
     fig.update_xaxes(constrain="domain")
     fig.update_yaxes(scaleanchor="x")
@@ -315,13 +323,13 @@ def create_z_slice(slice_slider, centered_meshes, icp_meshes, fig):
         for mesh in centered_meshes:
             x, y, _ = create_slice(mesh, slice_slider, mesh.bounds[0][2], mesh.bounds[1][2],
                                    [mesh.centroid[0], mesh.centroid[1], 0], [0, 0, 1], "z")
-            fig.add_trace(go.Scatter(x=x, y=y, line=go.scatter.Line(color="orange")))
+            fig.add_trace(go.Scatter(x=x, y=y, line=go.scatter.Line(color="orange", width=3)))
 
     if icp_meshes:
         for mesh in icp_meshes:
             x, y, _ = create_slice(mesh, slice_slider, mesh.bounds[0][2], mesh.bounds[1][2],
                                    [mesh.centroid[0], mesh.centroid[1], 0], [0, 0, 1], "z")
-            fig.add_trace(go.Scatter(x=x, y=y, line=go.scatter.Line(color="#1F77B4")))
+            fig.add_trace(go.Scatter(x=x, y=y, line=go.scatter.Line(color="#1F77B4", width=3)))
 
     fig.update_xaxes(constrain="domain")
     fig.update_yaxes(scaleanchor="x")
@@ -336,7 +344,7 @@ def create_distances_after_icp(patient):
     distances_icp = Project_2.compute_distances_after_icp(patient)
     prostate, bladder, rectum = distances_icp[0], distances_icp[1], distances_icp[2]
 
-    layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)', margin=dict(t=100, b=70),
+    layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)', margin=dict(t=80, b=70, l=90),
                        plot_bgcolor='rgba(70,70,70,1)', width=680, height=350,
                        title=dict(text="Distances of icp aligned organs and the plan organs",
                                   font=dict(size=18, color='lightgrey')))
@@ -346,7 +354,7 @@ def create_distances_after_icp(patient):
     fig.add_trace(go.Scatter(x=np.array(range(1, 14)), y=rectum, mode="lines+markers", name="Rectum"))
     fig.update_xaxes(title_text="Timestamp", tick0=0, dtick=1)
     fig.update_yaxes(title_text="Distance", tick0=0, dtick=2)
-    fig.update_layout(title_x=0.5)
+    fig.update_layout(title_x=0.5, font=dict(size=14), title_y=0.90)
 
     return fig
 
@@ -358,7 +366,7 @@ def create_distances_after_centering(patient):
     distances_center = Project_2.compute_distances_after_centering(patient)
     prostate, bladder, rectum = distances_center[0], distances_center[1], distances_center[2]
 
-    layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)', margin=dict(t=100, b=70),
+    layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)', margin=dict(t=80, b=70, l=90),
                        plot_bgcolor='rgba(70,70,70,1)', width=680, height=350,
                        title=dict(text="Distances of the centered organs and the plan organs",
                                   font=dict(size=18, color='lightgrey')))
@@ -368,11 +376,12 @@ def create_distances_after_centering(patient):
     fig.add_trace(go.Scatter(x=np.array(range(1, 14)), y=rectum, mode="lines+markers", name="Rectum"))
     fig.update_xaxes(title_text="Timestamp", tick0=0, dtick=1)
     fig.update_yaxes(title_text="Distance", tick0=0, dtick=2)
-    fig.update_layout(title_x=0.5)
+    fig.update_layout(title_x=0.5, font=dict(size=14), title_y=0.90)
 
     return fig
 
 
+# TODO: make grraph interactive by changing the time by clicking
 @app.callback(
     Output("alignment-differences", "figure"),
     Input("patient-dropdown", "value"))
@@ -382,17 +391,83 @@ def create_distances_between_alignments(patient):
     distances = np.array(distances_icp) - np.array(distances_center)
     prostate, bladder, rectum = distances[0], distances[1], distances[2]
 
-    layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)', margin=dict(t=100, b=70),
-                       plot_bgcolor='rgba(70,70,70,1)', width=680, height=350,
+    min_val = min(min(np.min(distances_center), np.min(distances_icp)), np.min(distances))
+    max_val = max(max(np.max(distances_center), np.max(distances_icp)), np.max(distances))
+
+    layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)', margin=dict(t=80, b=70, l=90, r=40),
+                       plot_bgcolor='rgba(70,70,70,1)', width=1330, height=350,
                        title=dict(text="Difference of distances between two alignments",
                                   font=dict(size=18, color='lightgrey')))
     fig = go.Figure(layout=layout)
-    fig.add_trace(go.Scatter(x=np.array(range(1, 14)), y=prostate, mode="lines+markers", name="Prostate"))
-    fig.add_trace(go.Scatter(x=np.array(range(1, 14)), y=bladder, mode="lines+markers", name="Bladder"))
-    fig.add_trace(go.Scatter(x=np.array(range(1, 14)), y=rectum, mode="lines+markers", name="Rectum"))
+    fig.add_trace(go.Bar(x=np.array(range(1, 14)), y=prostate, name="Prostate"))
+    fig.add_trace(go.Bar(x=np.array(range(1, 14)), y=bladder, name="Bladder"))
+    fig.add_trace(go.Bar(x=np.array(range(1, 14)), y=rectum, name="Rectum"))
     fig.update_xaxes(title_text="Timestamp", tick0=0, dtick=1)
-    fig.update_yaxes(title_text="Distance", tick0=0, dtick=2)
-    fig.update_layout(title_x=0.5)
+    fig.update_yaxes(title_text="Distance", tick0=0, dtick=2, range=[min_val - 1, max_val + 1])
+    fig.update_layout(title_x=0.5, font=dict(size=14), title_y=0.90)
+
+    return fig
+
+
+def create_patients_icp():
+    layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)', margin=dict(t=80, b=70,
+                                                                                                           l=90, r=81),
+                       plot_bgcolor='rgba(70,70,70,1)', width=680, height=350, showlegend=True,
+                       title=dict(text="Average movements of patients' organs after ICP aligning",
+                                  font=dict(size=18, color='lightgrey')))
+    fig = go.Figure(layout=layout)
+    avrg_prostate, avrg_bladder, avrg_rectum = [], [], []
+
+    for patient in PATIENTS:
+        distances_icp = Project_2.compute_distances_after_icp(patient)
+        prostate, bladder, rectum = Project_2.compute_average_distances(distances_icp)
+        avrg_prostate.append(prostate)
+        avrg_bladder.append(bladder)
+        avrg_rectum.append(rectum)
+
+    fig.add_trace(go.Scatter(x=PATIENTS, y=avrg_prostate, mode="markers", name="Prostate",
+                             marker=dict(symbol="circle", color=BLUE), line=dict(width=5)))
+    fig.add_trace(go.Scatter(x=PATIENTS, y=avrg_bladder, mode="markers", name="Bladder",
+                             marker=dict(symbol="square", color=GREEN), line=dict(width=5)))
+    fig.add_trace(go.Scatter(x=PATIENTS, y=avrg_rectum, mode="markers", name="Rectum",
+                             marker=dict(symbol="diamond", color=RED), line=dict(width=5)))
+    fig.update_traces(marker=dict(size=12))
+
+    fig.update_xaxes(title_text="Patient")
+    fig.update_yaxes(title_text="Average distance", tick0=0, dtick=2)
+    fig.update_layout(title_x=0.5, font=dict(size=14), title_y=0.90)
+
+    return fig
+
+
+def create_patients_center():
+    layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)', margin=dict(t=80, b=70,
+                                                                                                           l=90, r=81),
+                       plot_bgcolor='rgba(70,70,70,1)', width=680, height=350, showlegend=True,
+                       title=dict(text="Average movements of patients' organs after Centering",
+                                  font=dict(size=18, color='lightgrey')))
+    fig = go.Figure(layout=layout)
+
+    avrg_prostate, avrg_bladder, avrg_rectum = [], [], []
+    for patient in PATIENTS:
+        distances_center = Project_2.compute_distances_after_centering(patient)
+        prostate, bladder, rectum = Project_2.compute_average_distances(distances_center)
+        avrg_prostate.append(prostate)
+        avrg_bladder.append(bladder)
+        avrg_rectum.append(rectum)
+
+    fig.add_trace(go.Scatter(x=PATIENTS, y=avrg_prostate, mode="markers", name="Prostate",
+                             marker=dict(symbol="circle", color=BLUE), line=dict(width=5)))
+    fig.add_trace(go.Scatter(x=PATIENTS, y=avrg_bladder, mode="markers", name="Bladder",
+                             marker=dict(symbol="square", color=GREEN), line=dict(width=5)))
+    fig.add_trace(go.Scatter(x=PATIENTS, y=avrg_rectum, mode="markers", name="Rectum",
+                             marker=dict(symbol="diamond", color=RED), line=dict(width=5)))
+
+    fig.update_traces(marker=dict(size=12))
+
+    fig.update_xaxes(title_text="Patient")
+    fig.update_yaxes(title_text="Average distance", tick0=0, dtick=2)
+    fig.update_layout(title_x=0.5, font=dict(size=14), title_y=0.90)
 
     return fig
 
@@ -400,3 +475,5 @@ def create_distances_between_alignments(patient):
 if __name__ == '__main__':
     main()
     app.run_server(debug=True)
+
+# 722 4 visible circles
