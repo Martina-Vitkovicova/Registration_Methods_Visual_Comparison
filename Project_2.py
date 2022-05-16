@@ -43,6 +43,15 @@ def icp_transformation_matrices(other, key, print_out=False):
 
     return matrix
 
+def icp_rot_vec(other, key):
+    matrix, transformed, _ = trimesh.registration.icp(other, key, scale=False)
+    rotation_m = numpy.array([matrix[0][:3], matrix[1][:3], matrix[2][:3]])
+    translation_m = numpy.array([matrix[0][3], matrix[1][3], matrix[2][3]])
+
+    rot_vec = R.from_matrix(rotation_m).as_rotvec()
+
+    return matrix, rot_vec
+
 
 def print_matrix_info(rotation_m, translation_m):
     print("Rotation around x axis in degrees: {}".format(rotation_m[0]))
@@ -174,7 +183,7 @@ def visualization_method(method, key, other, organs):
 # for simple example of bones icp aligning call:
 # objects = import_obj(["OBJ_images/bones_region_grow.obj", "OBJ_images/bladder.obj",
 #                       "OBJ_images/prostate.obj", "OBJ_images/rectum.obj"])
-plan = import_obj(["OBJ_images/bones_plan.obj", "OBJ_images/prostate_plan.obj"])
+# plan = import_obj(["OBJ_images/bones_plan.obj", "OBJ_images/prostate_plan.obj"])
 
 
 # icp_transformation_matrices takes as arguments only vertices, so when we want to transform for example bladder.obj,
