@@ -3,15 +3,15 @@ import trimesh
 from dash import Dash, html, dcc, Output, Input, callback_context
 import numpy as np
 import plotly.graph_objects as go
-import plotly.express as px
 import Project_2
 
 FILEPATH = "C:\\Users\\vitko\\Desktop\\ProjetHCI\\Organs\\"
 PATIENTS = ["137", "146", "148", "198", "489", "579", "716", "722"]
 
-BLUE = "#636EFA"
+LIGHT_BLUE = "#636EFA"
 GREEN = "#EF553B"
 RED = "#00CC96"
+BLUE = "#1F77B4"
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 app = Dash(__name__, external_stylesheets=external_stylesheets)
@@ -50,10 +50,25 @@ def main():
 
             dcc.Graph(id="alignment-differences", style={"padding": "0px 0px 30px 40px"}),
 
+            html.H6("Select the mode:", style={'display': 'inline-block', "padding": "20px 0px 0px 45px"}),
+            dcc.RadioItems(options=["Average (plan organs showing)", "Two timestamps"],
+                           value="Average (plan organs showing)", id="mode-radioitems", inline=True,
+                           style={'display': 'inline-block', "padding": "0px 0px 0px 20px", "font-size": "18px"},
+                           inputStyle={"margin-left": "20px"}),
+
+            html.H6("Select the first and the second timestamp:",
+                    style={'display': 'inline-block', "padding": "20px 20px 0px 45px"}, id="timestamp"),
+            dcc.Dropdown(options=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13], value=1, searchable=False,
+                         id="fst-timestamp-dropdown", style={'display': 'inline-block', "width": "50px",
+                         "height": "30px", "font-size": "16px", "padding": "0px 0px 0px 0px"}),
+            dcc.Dropdown(options=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13], value=1, searchable=False,
+                         id="snd-timestamp-dropdown", style={'display': 'inline-block', "width": "50px",
+                         "height": "30px", "font-size": "16px", "padding": "0px 0px 0px 30px"}),
+
             html.H6("Select the method of alignment:",
-                    style={'display': 'inline-block', "padding": "10px 50px 0px 45px"}),
-            dcc.Checklist(options=["ICP", "Center point"], value=["ICP"], inline=True, id="alignment-checklist",
-                          style={'display': 'inline-block', "font-size": "18px", "padding": "0px 100px 0px 12px"}),
+                    style={'display': 'inline-block', "padding": "0px 50px 0px 45px"}, id="method"),
+            dcc.RadioItems(options=["ICP", "Center point"], value="ICP", inline=True, id="alignment-radioitems",
+                           style={'display': 'inline-block', "font-size": "18px", "padding": "0px 100px 0px 12px"}),
 
             html.H6("Select the visibility of organs/bones:",
                     style={'display': 'inline-block', "padding": "0px 0px 0px 45px"}),
@@ -72,34 +87,59 @@ def main():
 
             html.Div(className="row", children=[
                 html.Div(className='six columns', children=[
-                    dcc.Graph(id="x-slice-graph", style={'display': 'inline-block', "padding": "400px 0px 10px 0px"}),
-                    dcc.Graph(id="z-slice-graph", style={'display': 'inline-block', "padding": "0px 0px 0px 0px"})]),
-                html.Div(className='six columns', children=[
-                    dcc.Graph(id="y-slice-graph", style={'display': 'inline-block', "padding": "400px 0px 10px 0px"}),
+                    dcc.Graph(id="x-slice-graph", style={'display': 'inline-block', "padding": "420px 0px 10px 0px"}),
+                    dcc.Graph(id="y-slice-graph", style={'display': 'inline-block', "padding": "0px 0px 10px 0px"})]),
 
+                html.Div(className='six columns', children=[
                     html.Div(className="row", children=[
-                        html.H6("X axes slice:", style={'display': 'inline-block', "padding": "5px 0px 0px 30px"}),
+                        html.H6("X axes slice:", style={'display': 'inline-block', "padding": "450px 0px 0px 30px"}),
                         dcc.Slider(min=0, max=1, value=0.5, id="x-slice-slider", marks=None, updatemode="drag"),
-                        html.H6("Y axes slice:", style={'display': 'inline-block', "padding": "5px 0px 0px 35px"}),
+                        html.H6("Y axes slice:", style={'display': 'inline-block', "padding": "2px 0px 0px 35px"}),
                         dcc.Slider(min=0, max=1, value=0.5, id="y-slice-slider", marks=None),
-                        html.H6("Z axes slice:", style={'display': 'inline-block', "padding": "5px 0px 0px 30px"}),
+                        html.H6("Z axes slice:", style={'display': 'inline-block', "padding": "2px 0px 0px 30px"}),
                         dcc.Slider(min=0, max=1, value=0.5, id="z-slice-slider", marks=None)],
-                             style={'width': '80%', 'display': 'inline-block', "padding": "5px 0px 0px 5px"})])])])])
+                             style={'width': '80%', 'display': 'inline-block', "padding": "2px 0px 0px 5px"}),
+
+                    dcc.Graph(id="z-slice-graph", style={'display': 'inline-block', "padding": "35px 0px 0px 0px"})])])])])
+
+
+@app.callback(
+    Output(component_id='method', component_property='style'),
+    Output(component_id='alignment-radioitems', component_property='style'),
+    Output(component_id='timestamp', component_property='style'),
+    Output(component_id='fst-timestamp-dropdown', component_property='style'),
+    Output(component_id='snd-timestamp-dropdown', component_property='style'),
+    Input(component_id='mode-radioitems', component_property='value'))
+def options_visibility(mode):
+    if mode == "Two timestamps":
+        return {'display': 'inline-block', "padding": "0px 50px 0px 45px"}, \
+               {'display': 'inline-block', "font-size": "18px", "padding": "0px 100px 0px 12px"}, \
+               {'display': 'inline-block', "padding": "20px 20px 0px 45px"}, \
+               {'display': 'inline-block', "width": "50px",
+                "height": "30px", "font-size": "16px", "padding": "0px 0px 0px 0px"}, \
+               {'display': 'inline-block', "width": "50px",
+                "height": "30px", "font-size": "16px", "padding": "0px 0px 0px 30px"}
+
+    else:
+        return {'display': 'none'}, {'display': 'none'}, {'display': 'none'}, {'display': 'none'}, {'display': 'none'}
 
 
 @app.callback(
     Output("main-graph", "figure"),
     Input("patient-dropdown", "value"),
-    Input("alignment-checklist", "value"),
+    Input("alignment-radioitems", "value"),
     Input("organs-icp", "clickData"),
     Input("organs-center", "clickData"),
-    Input("organs-checklist", "value"))
-def update_3dgraph(patient, alignment_checklist, icp_click_data, center_click_data, organs):
+    Input("organs-checklist", "value"),
+    Input("mode-radioitems", "value"),
+    Input("fst-timestamp-dropdown", "value"),
+    Input("snd-timestamp-dropdown", "value"))
+def update_3dgraph(patient, alignment_radioitems, icp_click_data, center_click_data, organs, mode, fst_timestamp,
+                   snd_timestamp):
     timestamp = timestamp_click_data(icp_click_data, center_click_data)
-    objects = import_selected_organs(organs, timestamp, patient)
-
-    after_icp_meshes, vec, center = get_meshes_after_icp(timestamp, objects, patient)
-    after_center_meshes = get_meshes_after_centering(timestamp, objects, patient)
+    objects_fst = import_selected_organs(organs, fst_timestamp, patient)
+    objects_snd = import_selected_organs(organs, snd_timestamp, patient)
+    fst_meshes, snd_meshes = [], []
 
     camera = dict(up=dict(x=0, y=0, z=1), center=dict(x=0, y=0, z=0), eye=dict(x=0.5, y=-2, z=0))
     layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)', height=520, width=680,
@@ -107,51 +147,69 @@ def update_3dgraph(patient, alignment_checklist, icp_click_data, center_click_da
     fig = go.Figure(layout=layout)
     fig.update_layout(scene_camera=camera)
 
-    meshes = []
-    if "ICP" in alignment_checklist:
-        meshes.extend(after_icp_meshes)
+    if "Two timestamps" in mode:
+        if "ICP" in alignment_radioitems:
+            meshes, _, _ = get_meshes_after_icp(fst_timestamp, objects_fst, patient)
+            fst_meshes.extend(meshes)
+            meshes, _, _ = get_meshes_after_icp(snd_timestamp, objects_snd, patient, "orange")
+            snd_meshes.extend(meshes)
+            # fig.add_trace(go.Scatter3d(x=[center[0], vec[0]], y=[center[1], vec[1]], z=[center[2], vec[2]]))
 
-    if "Center point" in alignment_checklist:
-        meshes.extend(after_center_meshes)
+        if "Center point" in alignment_radioitems:
+            meshes = get_meshes_after_centering(fst_timestamp, objects_fst, patient, BLUE)
+            fst_meshes.extend(meshes)
+            meshes = get_meshes_after_centering(snd_timestamp, objects_snd, patient)
+            snd_meshes.extend(meshes)
+    else:
+        objects = import_selected_organs(organs, "_plan", patient)
+        fst_meshes = create_meshes_from_objs(objects, BLUE)
 
-    for mesh in meshes:
+    for mesh in fst_meshes:
         mesh.update(cmin=-7, lightposition=dict(x=100, y=200, z=0), lighting=dict(ambient=0.4, diffuse=1,
                                                                                   fresnel=0.1, specular=1,
                                                                                   roughness=0.5,
                                                                                   facenormalsepsilon=1e-15,
                                                                                   vertexnormalsepsilon=1e-15))
         fig.add_trace(mesh)
-    fig.update_layout(title_text="Patient {}, timestamp number {}".format(patient, timestamp), title_x=0.5,
+
+    for mesh in snd_meshes:
+        mesh.update(cmin=-7, lightposition=dict(x=100, y=200, z=0), lighting=dict(ambient=0.4, diffuse=1,
+                                                                                  fresnel=0.1, specular=1,
+                                                                                  roughness=0.5,
+                                                                                  facenormalsepsilon=1e-15,
+                                                                                  vertexnormalsepsilon=1e-15))
+        fig.add_trace(mesh)
+    fig.update_layout(title_text="Patient {}, timestamp number {} (blue) and number {} (orange)"
+                      .format(patient, fst_timestamp, snd_timestamp), title_x=0.5,
                       title_y=0.95)
 
-    fig.add_trace(go.Scatter3d(x=[center[0], vec[0]], y=[center[1], vec[1]], z=[center[2], vec[2]]))
     # fig.add_trace(go.Scatter3d(x=[0, 20], y=[0, 0], z=[50, 50]))
 
     return fig
 
 
-def import_selected_organs(organs, timestamp, patient):
+def import_selected_organs(organs, time_or_plan, patient):
     objects = []
 
     if "Bones" in organs:
-        objects.extend(Project_2.import_obj([FILEPATH + "{}\\bones\\bones{}.obj".format(patient, timestamp)]))
+        objects.extend(Project_2.import_obj([FILEPATH + "{}\\bones\\bones{}.obj".format(patient, time_or_plan)]))
     if "Prostate" in organs:
-        objects.extend(Project_2.import_obj([FILEPATH + "{}\\prostate\\prostate{}.obj".format(patient, timestamp)]))
+        objects.extend(Project_2.import_obj([FILEPATH + "{}\\prostate\\prostate{}.obj".format(patient, time_or_plan)]))
     if "Bladder" in organs:
-        objects.extend(Project_2.import_obj([FILEPATH + "{}\\bladder\\bladder{}.obj".format(patient, timestamp)]))
+        objects.extend(Project_2.import_obj([FILEPATH + "{}\\bladder\\bladder{}.obj".format(patient, time_or_plan)]))
     if "Rectum" in organs:
-        objects.extend(Project_2.import_obj([FILEPATH + "{}\\rectum\\rectum{}.obj".format(patient, timestamp)]))
+        objects.extend(Project_2.import_obj([FILEPATH + "{}\\rectum\\rectum{}.obj".format(patient, time_or_plan)]))
 
     return objects
 
 
-def get_meshes_after_icp(timestamp, objects, patient):
+def get_meshes_after_icp(timestamp, objects, patient, color=BLUE):
     plan_bones = Project_2.import_obj([FILEPATH + "{}\\bones\\bones_plan.obj".format(patient)])
     bones = Project_2.import_obj([FILEPATH + "{}\\bones\\bones{}.obj".format(patient, timestamp)])
 
     transform_matrix, vec = Project_2.icp_rot_vec(bones[0][0], plan_bones[0][0])
     transfr_objects = Project_2.vertices_transformation(transform_matrix, deepcopy(objects))
-    after_icp_meshes = create_meshes_from_objs(transfr_objects, "#1F77B4")
+    after_icp_meshes = create_meshes_from_objs(transfr_objects, color)
 
     bones_center = Project_2.find_center_point(bones[0][0])
     # print(vec, timestamp)
@@ -159,7 +217,7 @@ def get_meshes_after_icp(timestamp, objects, patient):
     return after_icp_meshes, vec, bones_center
 
 
-def get_meshes_after_centering(timestamp, objects, patient):
+def get_meshes_after_centering(timestamp, objects, patient, color="orange"):
     prostate = Project_2.import_obj([FILEPATH + "{}\\prostate\\prostate{}.obj".format(patient, timestamp)])
 
     plan_center = Project_2.find_center_point(Project_2.import_obj(
@@ -167,7 +225,7 @@ def get_meshes_after_centering(timestamp, objects, patient):
     other_center = Project_2.find_center_point(prostate[0][0])
     center_matrix = Project_2.create_translation_matrix(plan_center, other_center)
     center_transfr_objects = Project_2.vertices_transformation(center_matrix, deepcopy(objects))
-    after_center_meshes = create_meshes_from_objs(center_transfr_objects, "orange")
+    after_center_meshes = create_meshes_from_objs(center_transfr_objects, color)
 
     return after_center_meshes
 
@@ -187,6 +245,44 @@ def timestamp_click_data(icp_click_data, center_click_data):
     return timestamp
 
 
+def load_organs_average(patient, organs):
+    meshes = []
+
+    if "Prostate" in organs:
+        meshes.append(trimesh.load_mesh(FILEPATH + "{}\\prostate\\prostate_plan.obj".format(patient)))
+
+    if "Bladder" in organs:
+        meshes.append(trimesh.load_mesh(FILEPATH + "{}\\bladder\\bladder_plan.obj".format(patient)))
+
+    if "Rectum" in organs:
+        meshes.append(trimesh.load_mesh(FILEPATH + "{}\\rectum\\rectum_plan.obj".format(patient)))
+
+    if "Bones" in organs:
+        meshes.append(trimesh.load_mesh(FILEPATH + "{}\\bones\\bones_plan.obj".format(patient)))
+
+    return meshes
+
+
+def two_slices_mode(method, patient, organs, timestamp):
+    meshes = []
+
+    if "ICP" in method:
+        plan_bones = Project_2.import_obj([FILEPATH + "{}\\bones\\bones_plan.obj".format(patient)])
+        bones = Project_2.import_obj([FILEPATH + "{}\\bones\\bones{}.obj".format(patient, timestamp)])
+        icp_matrix = Project_2.icp_transformation_matrices(bones[0][0], plan_bones[0][0], False)
+        meshes = selected_organs_slices(icp_matrix, organs, timestamp, patient)
+
+    else:
+        plan_prostate = trimesh.load_mesh(FILEPATH + "{}\\prostate\\prostate_plan.obj".format(patient))
+        prostate = trimesh.load_mesh(FILEPATH + "{}\\prostate\\prostate{}.obj".format(patient, timestamp))
+        key_center = Project_2.find_center_point(plan_prostate.vertices)
+        other_center = Project_2.find_center_point(prostate.vertices)
+        center_matrix = Project_2.create_translation_matrix(key_center, other_center)
+        meshes = selected_organs_slices(center_matrix, organs, timestamp, patient)
+
+    return meshes
+
+
 @app.callback(
     Output("x-slice-graph", "figure"),
     Output("y-slice-graph", "figure"),
@@ -198,25 +294,15 @@ def timestamp_click_data(icp_click_data, center_click_data):
     Input("organs-center", "clickData"),
     Input("organs-checklist", "value"),
     Input("patient-dropdown", "value"),
-    Input("alignment-checklist", "value"))
-def create_graph_slices(x_slider, y_slider, z_slider, icp_click_data, center_click_data, organs, patient, method):
-    figures, centered_meshes, icp_meshes = [], [], []
+    Input("alignment-radioitems", "value"),
+    Input("mode-radioitems", "value"),
+    Input("fst-timestamp-dropdown", "value"),
+    Input("snd-timestamp-dropdown", "value"))
+def create_graph_slices(x_slider, y_slider, z_slider, icp_click_data, center_click_data, organs, patient, method, mode,
+                        fst_timestamp, snd_timestamp):
+    figures, snd_meshes = [], []
     names = ["X axis slice", "Y axis slice", "Z axis slice"]
     timestamp = timestamp_click_data(icp_click_data, center_click_data)
-
-    if "Center point" in method:
-        plan_prostate = trimesh.load_mesh(FILEPATH + "{}\\prostate\\prostate_plan.obj".format(patient))
-        prostate = trimesh.load_mesh(FILEPATH + "{}\\prostate\\prostate{}.obj".format(patient, timestamp))
-        key_center = Project_2.find_center_point(plan_prostate.vertices)
-        other_center = Project_2.find_center_point(prostate.vertices)
-        center_matrix = Project_2.create_translation_matrix(key_center, other_center)
-        centered_meshes = selected_organs_slices(center_matrix, organs, timestamp, patient)
-
-    if "ICP" in method:
-        plan_bones = Project_2.import_obj([FILEPATH + "{}\\bones\\bones_plan.obj".format(patient)])
-        bones = Project_2.import_obj([FILEPATH + "{}\\bones\\bones{}.obj".format(patient, timestamp)])
-        icp_matrix = Project_2.icp_transformation_matrices(bones[0][0], plan_bones[0][0], False)
-        icp_meshes = selected_organs_slices(icp_matrix, organs, timestamp, patient)
 
     for i in range(3):
         layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)', height=310,
@@ -226,9 +312,15 @@ def create_graph_slices(x_slider, y_slider, z_slider, icp_click_data, center_cli
         fig.update_layout(title_x=0.5)
         figures.append(fig)
 
-    x_fig = create_slice_final(x_slider, centered_meshes, icp_meshes, figures[0], "x")
-    y_fig = create_slice_final(y_slider, centered_meshes, icp_meshes, figures[1], "y")
-    z_fig = create_slice_final(z_slider, centered_meshes, icp_meshes, figures[2], "z")
+    if "Two timestamps" in mode:
+        fst_meshes = two_slices_mode(method, patient, organs, fst_timestamp)
+        snd_meshes = two_slices_mode(method, patient, organs, snd_timestamp)
+    else:
+        fst_meshes = load_organs_average(patient, organs)
+
+    x_fig = create_slice_final(x_slider, fst_meshes, snd_meshes, figures[0], "x")
+    y_fig = create_slice_final(y_slider, fst_meshes, snd_meshes, figures[1], "y")
+    z_fig = create_slice_final(z_slider, fst_meshes, snd_meshes, figures[2], "z")
 
     return x_fig, y_fig, z_fig
 
@@ -299,11 +391,11 @@ def create_slice_helper(meshes, slice_slider, fig, color, axis):
     return fig
 
 
-def create_slice_final(slice_slider, centered_meshes, icp_meshes, fig, axis):
+def create_slice_final(slice_slider, icp_meshes, centered_meshes,  fig, axis):
+    if icp_meshes:
+        create_slice_helper(icp_meshes, slice_slider, fig, BLUE, axis)
     if centered_meshes:
         create_slice_helper(centered_meshes, slice_slider, fig, "orange", axis)
-    if icp_meshes:
-        create_slice_helper(icp_meshes, slice_slider, fig, "#1F77B4", axis)
 
     fig.update_xaxes(constrain="domain")
     fig.update_yaxes(scaleanchor="x")
@@ -410,7 +502,7 @@ def create_patients_icp():
         avrg_rectum.append(rectum)
 
     fig.add_trace(go.Scatter(x=PATIENTS, y=avrg_prostate, mode="markers", name="Prostate",
-                             marker=dict(symbol="circle", color=BLUE), line=dict(width=5)))
+                             marker=dict(symbol="circle", color=LIGHT_BLUE), line=dict(width=5)))
     fig.add_trace(go.Scatter(x=PATIENTS, y=avrg_bladder, mode="markers", name="Bladder",
                              marker=dict(symbol="square", color=GREEN), line=dict(width=5)))
     fig.add_trace(go.Scatter(x=PATIENTS, y=avrg_rectum, mode="markers", name="Rectum",
@@ -441,7 +533,7 @@ def create_patients_center():
         avrg_rectum.append(rectum)
 
     fig.add_trace(go.Scatter(x=PATIENTS, y=avrg_prostate, mode="markers", name="Prostate",
-                             marker=dict(symbol="circle", color=BLUE), line=dict(width=5)))
+                             marker=dict(symbol="circle", color=LIGHT_BLUE), line=dict(width=5)))
     fig.add_trace(go.Scatter(x=PATIENTS, y=avrg_bladder, mode="markers", name="Bladder",
                              marker=dict(symbol="square", color=GREEN), line=dict(width=5)))
     fig.add_trace(go.Scatter(x=PATIENTS, y=avrg_rectum, mode="markers", name="Rectum",
