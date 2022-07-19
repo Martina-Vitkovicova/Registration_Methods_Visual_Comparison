@@ -7,6 +7,7 @@ import Project_2
 
 FILEPATH = "C:\\Users\\vitko\\Desktop\\ProjetHCI\\Organs\\"
 PATIENTS = ["137", "146", "148", "198", "489", "579", "716", "722"]
+TIMESTAMPS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
 
 LIGHT_BLUE = "#636EFA"
 GREEN = "#EF553B"
@@ -17,40 +18,24 @@ external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 app = Dash(__name__, external_stylesheets=external_stylesheets)
 
 
-def create_meshes_from_objs(objects, color):
-    meshes = []
-    for elem in objects:
-        x, y, z = np.array(elem[0]).T
-        i, j, k = np.array(elem[1]).T
-        pl_mesh = go.Mesh3d(x=x, y=y, z=z, color=color, flatshading=True, i=i, j=j, k=k, showscale=False, opacity=1)
-        meshes.append(pl_mesh)
-    return meshes
-
-
-def order_slice_vertices(vertices, indices):
-    ordered_vertices = []
-    for index in indices:
-        ordered_vertices.append(vertices[index])
-
-    return ordered_vertices
-
-
 def main():
     app.layout = html.Div(className="row", children=[
         html.Div(className='six columns', children=[
+            dcc.Graph(figure=heatmap_icp(), style={'display': 'inline-block', "padding": "20px 30px 0px 40px"}),
+
+            dcc.Graph(figure=create_patients_icp(), style={'display': 'inline-block', "padding": "20px 30px 0px 40px"}),
+
             html.H6("Select the patient:",
                     style={'display': 'inline-block', "padding": "20px 101px 0px 45px"}),
             dcc.Dropdown(options=PATIENTS, value="137", searchable=False,
                          id="patient-dropdown", style={'display': 'inline-block', "width": "80px", "font-size": "16px",
-                                                       "padding": "0px 80px 0px 85px"}),
-
-            dcc.Graph(figure=create_patients_icp(), style={'display': 'inline-block', "padding": "20px 30px 0px 40px"}),
+                                                       "padding": "20px 80px 0px 85px"}),
 
             dcc.Graph(id="organs-icp", style={'display': 'inline-block', "padding": "30px 30px 30px 40px"}),
 
             dcc.Graph(id="alignment-differences", style={"padding": "0px 0px 30px 40px"}),
 
-            html.H6("Select the mode:", style={'display': 'inline-block', "padding": "20px 0px 0px 45px"}),
+            html.H6("Select the mode:", style={'display': 'inline-block', "padding": "0px 0px 0px 45px"}),
             dcc.RadioItems(options=["Average (plan organs showing)", "Two timestamps"],
                            value="Average (plan organs showing)", id="mode-radioitems", inline=True,
                            style={'display': 'inline-block', "padding": "0px 0px 0px 20px", "font-size": "18px"},
@@ -58,12 +43,12 @@ def main():
 
             html.H6("Select the first and the second timestamp:",
                     style={'display': 'inline-block', "padding": "20px 20px 0px 45px"}, id="timestamp"),
-            dcc.Dropdown(options=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13], value=1, searchable=False,
-                         id="fst-timestamp-dropdown", style={'display': 'inline-block', "width": "50px",
-                         "height": "30px", "font-size": "16px", "padding": "0px 0px 0px 0px"}),
-            dcc.Dropdown(options=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13], value=1, searchable=False,
-                         id="snd-timestamp-dropdown", style={'display': 'inline-block', "width": "50px",
-                         "height": "30px", "font-size": "16px", "padding": "0px 0px 0px 30px"}),
+            dcc.Dropdown(options=TIMESTAMPS, value=1, searchable=False, id="fst-timestamp-dropdown",
+                         style={'display': 'inline-block', "width": "50px",
+                                "height": "30px", "font-size": "16px", "padding": "0px 0px 0px 0px"}),
+            dcc.Dropdown(options=TIMESTAMPS, value=1, searchable=False, id="snd-timestamp-dropdown",
+                         style={'display': 'inline-block', "width": "50px", "height": "30px", "font-size": "16px",
+                                "padding": "0px 0px 0px 30px"}),
 
             html.H6("Select the method of alignment:",
                     style={'display': 'inline-block', "padding": "0px 50px 0px 45px"}, id="method"),
@@ -76,14 +61,22 @@ def main():
                           id="organs-checklist",
                           style={'display': 'inline-block', "font-size": "18px", "padding": "0px 0px 0px 25px"}),
 
+            html.H6("Adjust opacity of the organs:", style={'display': 'inline-block', "padding": "0px 0px 0px 45px"}),
+            html.Div(dcc.Slider(min=0, max=1, value=1, id="opacity-slider", marks=None),
+                     style={"width": "40%", "height": "10px", 'display': 'inline-block', "padding": "0px 0px 0px 40px"}),
+
             dcc.Graph(id="main-graph", style={'display': 'inline-block', "padding": "20px 30px 0px 40px"})]),
 
 
 
         html.Div(className='six columns', children=[
-            dcc.Graph(figure=create_patients_center(), style={'display': 'inline-block', "padding": "87px 0px 0px 0px"}),
+            dcc.Graph(figure=heatmap_centering(),
+                      style={'display': 'inline-block', "padding": "20px 0px 0px 0px"}),
 
-            dcc.Graph(id="organs-center", style={'display': 'inline-block', "padding": "30px 30px 30px 0px"}),
+            dcc.Graph(figure=create_patients_center(),
+                      style={'display': 'inline-block', "padding": "20px 0px 0px 0px"}),
+
+            dcc.Graph(id="organs-center", style={'display': 'inline-block', "padding": "102px 30px 30px 0px"}),
 
             html.Div(className="row", children=[
                 html.Div(className='six columns', children=[
@@ -92,7 +85,8 @@ def main():
 
                 html.Div(className='six columns', children=[
                     html.Div(className="row", children=[
-                        html.H6("X axes slice:", style={'display': 'inline-block', "padding": "450px 0px 0px 30px"}),
+                        html.H6("X axes slice:", style={'display': 'inline-block', "padding": "450px 0px 0px 30px"},
+                                id="x-slice-header"),
                         dcc.Slider(min=0, max=1, value=0.5, id="x-slice-slider", marks=None, updatemode="drag"),
                         html.H6("Y axes slice:", style={'display': 'inline-block', "padding": "2px 0px 0px 35px"}),
                         dcc.Slider(min=0, max=1, value=0.5, id="y-slice-slider", marks=None),
@@ -100,7 +94,26 @@ def main():
                         dcc.Slider(min=0, max=1, value=0.5, id="z-slice-slider", marks=None)],
                              style={'width': '80%', 'display': 'inline-block', "padding": "2px 0px 0px 5px"}),
 
-                    dcc.Graph(id="z-slice-graph", style={'display': 'inline-block', "padding": "35px 0px 0px 0px"})])])])])
+                    dcc.Graph(id="z-slice-graph",
+                              style={'display': 'inline-block', "padding": "35px 0px 0px 0px"})])])])])
+
+
+def create_meshes_from_objs(objects, color):
+    meshes = []
+    for elem in objects:
+        x, y, z = np.array(elem[0]).T
+        i, j, k = np.array(elem[1]).T
+        pl_mesh = go.Mesh3d(x=x, y=y, z=z, color=color, flatshading=True, i=i, j=j, k=k, showscale=False)
+        meshes.append(pl_mesh)
+    return meshes
+
+
+def order_slice_vertices(vertices, indices):
+    ordered_vertices = []
+    for index in indices:
+        ordered_vertices.append(vertices[index])
+
+    return ordered_vertices
 
 
 @app.callback(
@@ -109,6 +122,8 @@ def main():
     Output(component_id='timestamp', component_property='style'),
     Output(component_id='fst-timestamp-dropdown', component_property='style'),
     Output(component_id='snd-timestamp-dropdown', component_property='style'),
+    Output(component_id='x-slice-graph', component_property='style'),
+    Output(component_id='x-slice-header', component_property='style'),
     Input(component_id='mode-radioitems', component_property='value'))
 def options_visibility(mode):
     if mode == "Two timestamps":
@@ -118,10 +133,14 @@ def options_visibility(mode):
                {'display': 'inline-block', "width": "50px",
                 "height": "30px", "font-size": "16px", "padding": "0px 0px 0px 0px"}, \
                {'display': 'inline-block', "width": "50px",
-                "height": "30px", "font-size": "16px", "padding": "0px 0px 0px 30px"}
+                "height": "30px", "font-size": "16px", "padding": "0px 0px 0px 30px"}, \
+               {'display': 'inline-block', "padding": "500px 0px 10px 0px"}, \
+               {'display': 'inline-block', "padding": "530px 0px 0px 30px"}
 
     else:
-        return {'display': 'none'}, {'display': 'none'}, {'display': 'none'}, {'display': 'none'}, {'display': 'none'}
+        return {'display': 'none'}, {'display': 'none'}, {'display': 'none'}, {'display': 'none'}, {'display': 'none'}, \
+               {'display': 'inline-block', "padding": "420px 0px 10px 0px"}, {'display': 'inline-block',
+                                                                              "padding": "450px 0px 0px 30px"}
 
 
 @app.callback(
@@ -133,13 +152,14 @@ def options_visibility(mode):
     Input("organs-checklist", "value"),
     Input("mode-radioitems", "value"),
     Input("fst-timestamp-dropdown", "value"),
-    Input("snd-timestamp-dropdown", "value"))
+    Input("snd-timestamp-dropdown", "value"),
+    Input("opacity-slider", "value"))
 def update_3dgraph(patient, alignment_radioitems, icp_click_data, center_click_data, organs, mode, fst_timestamp,
-                   snd_timestamp):
+                   snd_timestamp, opacity_slider):
     timestamp = timestamp_click_data(icp_click_data, center_click_data)
     objects_fst = import_selected_organs(organs, fst_timestamp, patient)
     objects_snd = import_selected_organs(organs, snd_timestamp, patient)
-    fst_meshes, snd_meshes = [], []
+    fst_meshes, snd_meshes, center1_after, center2_after = [], [], [], []
 
     camera = dict(up=dict(x=0, y=0, z=1), center=dict(x=0, y=0, z=0), eye=dict(x=0.5, y=-2, z=0))
     layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)', height=520, width=680,
@@ -149,35 +169,36 @@ def update_3dgraph(patient, alignment_radioitems, icp_click_data, center_click_d
 
     if "Two timestamps" in mode:
         if "ICP" in alignment_radioitems:
-            meshes, _, _ = get_meshes_after_icp(fst_timestamp, objects_fst, patient)
+            meshes, center1_before, center1_after = get_meshes_after_icp(fst_timestamp, objects_fst, patient)
             fst_meshes.extend(meshes)
-            meshes, _, _ = get_meshes_after_icp(snd_timestamp, objects_snd, patient, "orange")
+            meshes, center2_before, center2_after = get_meshes_after_icp(snd_timestamp, objects_snd, patient, "orange")
             snd_meshes.extend(meshes)
-            # fig.add_trace(go.Scatter3d(x=[center[0], vec[0]], y=[center[1], vec[1]], z=[center[2], vec[2]]))
 
         if "Center point" in alignment_radioitems:
-            meshes = get_meshes_after_centering(fst_timestamp, objects_fst, patient, BLUE)
+            meshes, center1_before, center1_after = get_meshes_after_centering(fst_timestamp, objects_fst, patient,
+                                                                               BLUE)
             fst_meshes.extend(meshes)
-            meshes = get_meshes_after_centering(snd_timestamp, objects_snd, patient)
+            meshes, center2_before, center2_after = get_meshes_after_centering(snd_timestamp, objects_snd, patient)
             snd_meshes.extend(meshes)
+        x1, y1, z1 = center1_after[0][0][0]
+        x2, y2, z2 = center2_after[0][0][0]
+        fig.add_trace(go.Scatter3d(x=[x1, x2], y=[y1, y2], z=[z1, z2]))
+
     else:
         objects = import_selected_organs(organs, "_plan", patient)
         fst_meshes = create_meshes_from_objs(objects, BLUE)
 
     for mesh in fst_meshes:
-        mesh.update(cmin=-7, lightposition=dict(x=100, y=200, z=0), lighting=dict(ambient=0.4, diffuse=1,
-                                                                                  fresnel=0.1, specular=1,
-                                                                                  roughness=0.5,
-                                                                                  facenormalsepsilon=1e-15,
-                                                                                  vertexnormalsepsilon=1e-15))
+        mesh.update(cmin=-7, opacity=opacity_slider, lightposition=dict(x=100, y=200, z=0),
+                    lighting=dict(ambient=0.4, diffuse=1, fresnel=0.1, specular=1, roughness=0.5,
+                                  facenormalsepsilon=1e-15,vertexnormalsepsilon=1e-15))
         fig.add_trace(mesh)
 
     for mesh in snd_meshes:
-        mesh.update(cmin=-7, lightposition=dict(x=100, y=200, z=0), lighting=dict(ambient=0.4, diffuse=1,
-                                                                                  fresnel=0.1, specular=1,
-                                                                                  roughness=0.5,
-                                                                                  facenormalsepsilon=1e-15,
-                                                                                  vertexnormalsepsilon=1e-15))
+        mesh.update(cmin=-7, opacity=opacity_slider, lightposition=dict(x=100, y=200, z=0),
+                    lighting=dict(ambient=0.4, diffuse=1, fresnel=0.1, specular=1, roughness=0.5,
+                    facenormalsepsilon=1e-15, vertexnormalsepsilon=1e-15))
+
         fig.add_trace(mesh)
     fig.update_layout(title_text="Patient {}, timestamp number {} (blue) and number {} (orange)"
                       .format(patient, fst_timestamp, snd_timestamp), title_x=0.5,
@@ -206,19 +227,21 @@ def import_selected_organs(organs, time_or_plan, patient):
 def get_meshes_after_icp(timestamp, objects, patient, color=BLUE):
     plan_bones = Project_2.import_obj([FILEPATH + "{}\\bones\\bones_plan.obj".format(patient)])
     bones = Project_2.import_obj([FILEPATH + "{}\\bones\\bones{}.obj".format(patient, timestamp)])
+    bones_center_before = Project_2.find_center_point(bones[0][0])
 
     transform_matrix, vec = Project_2.icp_rot_vec(bones[0][0], plan_bones[0][0])
     transfr_objects = Project_2.vertices_transformation(transform_matrix, deepcopy(objects))
     after_icp_meshes = create_meshes_from_objs(transfr_objects, color)
 
-    bones_center = Project_2.find_center_point(bones[0][0])
+    bones_center_after = Project_2.vertices_transformation(transform_matrix, [[[bones_center_before]]])
     # print(vec, timestamp)
 
-    return after_icp_meshes, vec, bones_center
+    return after_icp_meshes, bones_center_before, bones_center_after
 
 
 def get_meshes_after_centering(timestamp, objects, patient, color="orange"):
     prostate = Project_2.import_obj([FILEPATH + "{}\\prostate\\prostate{}.obj".format(patient, timestamp)])
+    center_before = Project_2.find_center_point(prostate[0][0])
 
     plan_center = Project_2.find_center_point(Project_2.import_obj(
         [FILEPATH + "{}\\prostate\\prostate_plan.obj".format(patient)])[0][0])
@@ -227,7 +250,9 @@ def get_meshes_after_centering(timestamp, objects, patient, color="orange"):
     center_transfr_objects = Project_2.vertices_transformation(center_matrix, deepcopy(objects))
     after_center_meshes = create_meshes_from_objs(center_transfr_objects, color)
 
-    return after_center_meshes
+    center_after = Project_2.vertices_transformation(center_matrix, [[[plan_center]]])
+
+    return after_center_meshes, center_before, center_after
 
 
 def timestamp_click_data(icp_click_data, center_click_data):
@@ -264,8 +289,6 @@ def load_organs_average(patient, organs):
 
 
 def two_slices_mode(method, patient, organs, timestamp):
-    meshes = []
-
     if "ICP" in method:
         plan_bones = Project_2.import_obj([FILEPATH + "{}\\bones\\bones_plan.obj".format(patient)])
         bones = Project_2.import_obj([FILEPATH + "{}\\bones\\bones{}.obj".format(patient, timestamp)])
@@ -391,7 +414,7 @@ def create_slice_helper(meshes, slice_slider, fig, color, axis):
     return fig
 
 
-def create_slice_final(slice_slider, icp_meshes, centered_meshes,  fig, axis):
+def create_slice_final(slice_slider, icp_meshes, centered_meshes, fig, axis):
     if icp_meshes:
         create_slice_helper(icp_meshes, slice_slider, fig, BLUE, axis)
     if centered_meshes:
@@ -420,9 +443,10 @@ def create_distances_after_icp(patient):
     distances_icp = Project_2.compute_distances_after_icp(patient)
     prostate, bladder, rectum = distances_icp[0], distances_icp[1], distances_icp[2]
 
-    layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)', margin=dict(t=80, b=70, l=90),
+    layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)',
+                       margin=dict(t=80, b=70, l=90),
                        plot_bgcolor='rgba(70,70,70,1)', width=680, height=350,
-                       title=dict(text="Distances of icp aligned organs and the plan organs",
+                       title=dict(text="Distances of icp aligned organs and the plan organs of patient {}".format(patient),
                                   font=dict(size=18, color='lightgrey')))
     fig = go.Figure(layout=layout)
     fig.add_trace(go.Scatter(x=np.array(range(1, 14)), y=prostate, mode="lines+markers", name="Prostate"))
@@ -442,9 +466,10 @@ def create_distances_after_centering(patient):
     distances_center = Project_2.compute_distances_after_centering(patient)
     prostate, bladder, rectum = distances_center[0], distances_center[1], distances_center[2]
 
-    layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)', margin=dict(t=80, b=70, l=90),
+    layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)',
+                       margin=dict(t=80, b=70, l=90),
                        plot_bgcolor='rgba(70,70,70,1)', width=680, height=350,
-                       title=dict(text="Distances of the centered organs and the plan organs",
+                       title=dict(text="Distances of the centered organs and the plan organs of patient {}".format(patient),
                                   font=dict(size=18, color='lightgrey')))
     fig = go.Figure(layout=layout)
     fig.add_trace(go.Scatter(x=np.array(range(1, 14)), y=prostate, mode="lines+markers", name="Prostate"))
@@ -470,7 +495,8 @@ def create_distances_between_alignments(patient):
     min_val = min(min(np.min(distances_center), np.min(distances_icp)), np.min(distances))
     max_val = max(max(np.max(distances_center), np.max(distances_icp)), np.max(distances))
 
-    layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)', margin=dict(t=80, b=70, l=90, r=40),
+    layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)',
+                       margin=dict(t=80, b=70, l=90, r=40),
                        plot_bgcolor='rgba(70,70,70,1)', width=1420, height=350,
                        title=dict(text="Difference of distances between two alignments",
                                   font=dict(size=18, color='lightgrey')))
@@ -485,6 +511,16 @@ def create_distances_between_alignments(patient):
     return fig
 
 
+avrg_prostate_icp, avrg_bladder_icp, avrg_rectum_icp, all_distances_icp = [], [], [], []
+for patient in PATIENTS:
+    distances_icp = Project_2.compute_distances_after_icp(patient)
+    all_distances_icp.append(distances_icp)
+    prostate, bladder, rectum = Project_2.compute_average_distances(distances_icp)
+    avrg_prostate_icp.append(prostate)
+    avrg_bladder_icp.append(bladder)
+    avrg_rectum_icp.append(rectum)
+
+
 def create_patients_icp():
     layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)', margin=dict(t=80, b=70,
                                                                                                            l=90, r=81),
@@ -492,26 +528,67 @@ def create_patients_icp():
                        title=dict(text="Average movements of patients' organs after ICP aligning",
                                   font=dict(size=18, color='lightgrey')))
     fig = go.Figure(layout=layout)
-    avrg_prostate, avrg_bladder, avrg_rectum = [], [], []
 
-    for patient in PATIENTS:
-        distances_icp = Project_2.compute_distances_after_icp(patient)
-        prostate, bladder, rectum = Project_2.compute_average_distances(distances_icp)
-        avrg_prostate.append(prostate)
-        avrg_bladder.append(bladder)
-        avrg_rectum.append(rectum)
-
-    fig.add_trace(go.Scatter(x=PATIENTS, y=avrg_prostate, mode="markers", name="Prostate",
+    fig.add_trace(go.Scatter(x=PATIENTS, y=avrg_prostate_icp, mode="markers", name="Prostate",
                              marker=dict(symbol="circle", color=LIGHT_BLUE), line=dict(width=5)))
-    fig.add_trace(go.Scatter(x=PATIENTS, y=avrg_bladder, mode="markers", name="Bladder",
+    fig.add_trace(go.Scatter(x=PATIENTS, y=avrg_bladder_icp, mode="markers", name="Bladder",
                              marker=dict(symbol="square", color=GREEN), line=dict(width=5)))
-    fig.add_trace(go.Scatter(x=PATIENTS, y=avrg_rectum, mode="markers", name="Rectum",
+    fig.add_trace(go.Scatter(x=PATIENTS, y=avrg_rectum_icp, mode="markers", name="Rectum",
                              marker=dict(symbol="diamond", color=RED), line=dict(width=5)))
     fig.update_traces(marker=dict(size=12))
 
     fig.update_xaxes(title_text="Patient")
     fig.update_yaxes(title_text="Average distance", tick0=0, dtick=2)
     fig.update_layout(title_x=0.5, font=dict(size=14), title_y=0.90)
+
+    return fig
+
+
+def heatmap_icp():
+    layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)', margin=dict(t=80, b=70,
+                       l=90, r=81), plot_bgcolor='rgba(70,70,70,1)', width=680, height=350, showlegend=True,
+                       title=dict(text="Movements of patients' prostates after ICP aligning",
+                                  font=dict(size=18, color='lightgrey')))
+
+    prostate_data = [patient[0] for patient in all_distances_icp]
+    # bladder_data = [patient[1] for patient in all_distances_icp]
+    # rectum_data = [patient[2] for patient in all_distances_icp]
+    fig = go.Figure(data=go.Heatmap(z=prostate_data, x=TIMESTAMPS, y=PATIENTS), layout=layout)
+    # fig.add_trace(go.Heatmap(z=bladder_data, x=TIMESTAMPS, y=PATIENTS))
+    # fig.add_trace(go.Heatmap(z=rectum_data, x=TIMESTAMPS, y=PATIENTS))
+
+    fig.update_xaxes(title_text="Timestamps", tick0=1, dtick=1)
+    fig.update_yaxes(title_text="Patients")
+    fig.update_layout(title_x=0.5, font=dict(size=14), title_y=0.90)
+    fig.update_coloraxes(colorbar_dtick=1)
+
+    return fig
+
+
+avrg_prostate_cent, avrg_bladder_cent, avrg_rectum_cent, all_distances_center = [], [], [], []
+
+for patient in PATIENTS:
+    distances_center = Project_2.compute_distances_after_centering(patient)
+    all_distances_center.append(distances_center)
+    prostate, bladder, rectum = Project_2.compute_average_distances(distances_center)
+    avrg_prostate_cent.append(prostate)
+    avrg_bladder_cent.append(bladder)
+    avrg_rectum_cent.append(rectum)
+
+
+def heatmap_centering():
+    layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)', margin=dict(t=80, b=70,
+                       l=90, r=81), plot_bgcolor='rgba(70,70,70,1)', width=680, height=350, showlegend=True,
+                       title=dict(text="Movements of patients' bladders after centering on prostate",
+                                  font=dict(size=18, color='lightgrey')))
+
+    bladder_data = [patient[1] for patient in all_distances_center]
+    fig = go.Figure(data=go.Heatmap(z=bladder_data, x=TIMESTAMPS, y=PATIENTS), layout=layout)
+
+    fig.update_xaxes(title_text="Timestamps", tick0=1, dtick=1)
+    fig.update_yaxes(title_text="Patients")
+    fig.update_layout(title_x=0.5, font=dict(size=14), title_y=0.90)
+    fig.update_coloraxes(colorbar_dtick=1, colorbar_tick0=0)
 
     return fig
 
@@ -524,19 +601,11 @@ def create_patients_center():
                                   font=dict(size=18, color='lightgrey')))
     fig = go.Figure(layout=layout)
 
-    avrg_prostate, avrg_bladder, avrg_rectum = [], [], []
-    for patient in PATIENTS:
-        distances_center = Project_2.compute_distances_after_centering(patient)
-        prostate, bladder, rectum = Project_2.compute_average_distances(distances_center)
-        avrg_prostate.append(prostate)
-        avrg_bladder.append(bladder)
-        avrg_rectum.append(rectum)
-
-    fig.add_trace(go.Scatter(x=PATIENTS, y=avrg_prostate, mode="markers", name="Prostate",
+    fig.add_trace(go.Scatter(x=PATIENTS, y=avrg_prostate_cent, mode="markers", name="Prostate",
                              marker=dict(symbol="circle", color=LIGHT_BLUE), line=dict(width=5)))
-    fig.add_trace(go.Scatter(x=PATIENTS, y=avrg_bladder, mode="markers", name="Bladder",
+    fig.add_trace(go.Scatter(x=PATIENTS, y=avrg_bladder_cent, mode="markers", name="Bladder",
                              marker=dict(symbol="square", color=GREEN), line=dict(width=5)))
-    fig.add_trace(go.Scatter(x=PATIENTS, y=avrg_rectum, mode="markers", name="Rectum",
+    fig.add_trace(go.Scatter(x=PATIENTS, y=avrg_rectum_cent, mode="markers", name="Rectum",
                              marker=dict(symbol="diamond", color=RED), line=dict(width=5)))
 
     fig.update_traces(marker=dict(size=12))
@@ -552,4 +621,3 @@ if __name__ == '__main__':
     main()
     app.run_server(debug=True)
 
-# 722 4 visible circles
