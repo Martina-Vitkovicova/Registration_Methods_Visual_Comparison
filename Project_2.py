@@ -383,18 +383,22 @@ def compute_distances_after_centering(patient):
     plan_prostate_center = find_center_point([], trimesh.load_mesh(PATH + "{}\\prostate\\prostate_plan.obj".format(patient)).bounds)
     plan_bladder_center = find_center_point([], trimesh.load_mesh(PATH + "{}\\bladder\\bladder_plan.obj".format(patient)).bounds)
     plan_rectum_center = find_center_point([], trimesh.load_mesh(PATH + "{}\\rectum\\rectum_plan.obj".format(patient)).bounds)
-    distances = [[], [], []]
-    keys = [numpy.array(plan_prostate_center), numpy.array(plan_bladder_center), numpy.array(plan_rectum_center)]
+    plan_bones_center = find_center_point([], trimesh.load_mesh(PATH + "{}\\bones\\bones_plan.obj".format(patient)).bounds)
+
+    distances = [[], [], [], []]
+    keys = [numpy.array(plan_prostate_center), numpy.array(plan_bladder_center), numpy.array(plan_rectum_center),
+            numpy.array(plan_bones_center)]
 
     for i in range(1, 14):
         prostate = numpy.array(find_center_point([], trimesh.load_mesh(PATH + "{}\\prostate\\prostate{}.obj".format(patient, i)).bounds))
         bladder = numpy.array(find_center_point([], trimesh.load_mesh(PATH + "{}\\bladder\\bladder{}.obj".format(patient, i)).bounds))
         rectum = numpy.array(find_center_point([], trimesh.load_mesh(PATH + "{}\\rectum\\rectum{}.obj".format(patient, i)).bounds))
-        organs = [prostate, bladder, rectum]
+        bones = numpy.array(find_center_point([], trimesh.load_mesh(PATH + "{}\\bones\\bones{}.obj".format(patient, i)).bounds))
+        organs = [prostate, bladder, rectum, bones]
 
         transform_matrix = create_translation_matrix(plan_prostate_center, prostate)
 
-        for i in range(3):
+        for i in range(4):
             transf_organ_center = vertices_transformation(transform_matrix, [[[organs[i]]]])
             distances[i].append(numpy.linalg.norm(keys[i] - numpy.array(transf_organ_center)))
 
@@ -421,9 +425,6 @@ def compute_average_distances(distances):
     avrg_rectum = np.average(rectum)
 
     return [avrg_prostate, avrg_bladder, avrg_rectum]
-
-
-
 
 
 # timer()

@@ -21,9 +21,12 @@ app = Dash(__name__, external_stylesheets=external_stylesheets)
 def main():
     app.layout = html.Div(className="row", children=[
         html.Div(className='six columns', children=[
-            dcc.Graph(figure=heatmap_icp(), style={'display': 'inline-block', "padding": "20px 30px 0px 40px"}),
+            dcc.Graph(id="heatmap-icp", style={'display': 'inline-block', "padding": "20px 30px 0px 40px"}),
 
-            dcc.Graph(figure=create_patients_icp(), style={'display': 'inline-block', "padding": "20px 30px 0px 40px"}),
+            dcc.Graph(id="heatmap-center",
+                      style={'display': 'inline-block', "padding": "20px 0px 0px 40px"}),
+
+            dcc.Graph(figure=average_distances_icp(), style={'display': 'inline-block', "padding": "20px 30px 0px 40px"}),
 
             html.H6("Select the patient:",
                     style={'display': 'inline-block', "padding": "20px 101px 0px 45px"}),
@@ -63,18 +66,14 @@ def main():
 
             html.H6("Adjust opacity of the organs:", style={'display': 'inline-block', "padding": "0px 0px 0px 45px"}),
             html.Div(dcc.Slider(min=0, max=1, value=1, id="opacity-slider", marks=None),
-                     style={"width": "40%", "height": "10px", 'display': 'inline-block', "padding": "0px 0px 0px 40px"}),
+                     style={"width": "40%", "height": "10px", 'display': 'inline-block',
+                            "padding": "0px 0px 0px 40px"}),
 
             dcc.Graph(id="main-graph", style={'display': 'inline-block', "padding": "20px 30px 0px 40px"})]),
 
-
-
         html.Div(className='six columns', children=[
-            dcc.Graph(figure=heatmap_centering(),
-                      style={'display': 'inline-block', "padding": "20px 0px 0px 0px"}),
-
-            dcc.Graph(figure=create_patients_center(),
-                      style={'display': 'inline-block', "padding": "20px 0px 0px 0px"}),
+            dcc.Graph(figure=average_distances_center(),
+                      style={'display': 'inline-block', "padding": "774px 0px 0px 0px"}),
 
             dcc.Graph(id="organs-center", style={'display': 'inline-block', "padding": "102px 30px 30px 0px"}),
 
@@ -191,13 +190,13 @@ def update_3dgraph(patient, alignment_radioitems, icp_click_data, center_click_d
     for mesh in fst_meshes:
         mesh.update(cmin=-7, opacity=opacity_slider, lightposition=dict(x=100, y=200, z=0),
                     lighting=dict(ambient=0.4, diffuse=1, fresnel=0.1, specular=1, roughness=0.5,
-                                  facenormalsepsilon=1e-15,vertexnormalsepsilon=1e-15))
+                                  facenormalsepsilon=1e-15, vertexnormalsepsilon=1e-15))
         fig.add_trace(mesh)
 
     for mesh in snd_meshes:
         mesh.update(cmin=-7, opacity=opacity_slider, lightposition=dict(x=100, y=200, z=0),
                     lighting=dict(ambient=0.4, diffuse=1, fresnel=0.1, specular=1, roughness=0.5,
-                    facenormalsepsilon=1e-15, vertexnormalsepsilon=1e-15))
+                                  facenormalsepsilon=1e-15, vertexnormalsepsilon=1e-15))
 
         fig.add_trace(mesh)
     fig.update_layout(title_text="Patient {}, timestamp number {} (blue) and number {} (orange)"
@@ -259,7 +258,7 @@ def timestamp_click_data(icp_click_data, center_click_data):
     icp_click_data = int(icp_click_data["points"][0]["x"]) if icp_click_data is not None else 1
     center_click_data = int(center_click_data["points"][0]["x"]) if center_click_data is not None else 1
 
-    input_id = callback_context.triggered[0]['prop_id'].split('.')[0]
+    input_id = callback_context.triggered[0]["prop_id"].split(".")[0]
     timestamp = 1
 
     if input_id == "organs-center":
@@ -446,8 +445,9 @@ def create_distances_after_icp(patient):
     layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)',
                        margin=dict(t=80, b=70, l=90),
                        plot_bgcolor='rgba(70,70,70,1)', width=680, height=350,
-                       title=dict(text="Distances of icp aligned organs and the plan organs of patient {}".format(patient),
-                                  font=dict(size=18, color='lightgrey')))
+                       title=dict(
+                           text="Distances of icp aligned organs and the plan organs of patient {}".format(patient),
+                           font=dict(size=18, color='lightgrey')))
     fig = go.Figure(layout=layout)
     fig.add_trace(go.Scatter(x=np.array(range(1, 14)), y=prostate, mode="lines+markers", name="Prostate"))
     fig.add_trace(go.Scatter(x=np.array(range(1, 14)), y=bladder, mode="lines+markers", name="Bladder"))
@@ -464,13 +464,14 @@ def create_distances_after_icp(patient):
     Input("patient-dropdown", "value"))
 def create_distances_after_centering(patient):
     distances_center = Project_2.compute_distances_after_centering(patient)
-    prostate, bladder, rectum = distances_center[0], distances_center[1], distances_center[2]
+    prostate, bladder, rectum, bones = distances_center[0], distances_center[1], distances_center[2], distances_center[3]
 
     layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)',
                        margin=dict(t=80, b=70, l=90),
                        plot_bgcolor='rgba(70,70,70,1)', width=680, height=350,
-                       title=dict(text="Distances of the centered organs and the plan organs of patient {}".format(patient),
-                                  font=dict(size=18, color='lightgrey')))
+                       title=dict(
+                           text="Distances of the centered organs and the plan organs of patient {}".format(patient),
+                           font=dict(size=18, color='lightgrey')))
     fig = go.Figure(layout=layout)
     fig.add_trace(go.Scatter(x=np.array(range(1, 14)), y=prostate, mode="lines+markers", name="Prostate"))
     fig.add_trace(go.Scatter(x=np.array(range(1, 14)), y=bladder, mode="lines+markers", name="Bladder"))
@@ -482,14 +483,15 @@ def create_distances_after_centering(patient):
     return fig
 
 
-# TODO: make grraph interactive by changing the time by clicking
+# TODO: make graph interactive by changing the time by clicking
 @app.callback(
     Output("alignment-differences", "figure"),
     Input("patient-dropdown", "value"))
 def create_distances_between_alignments(patient):
     distances_icp = Project_2.compute_distances_after_icp(patient)
     distances_center = Project_2.compute_distances_after_centering(patient)
-    distances = np.array(distances_icp) - np.array(distances_center)
+    print(len(distances_center))
+    distances = np.array(distances_icp) - np.array(distances_center[:3])
     prostate, bladder, rectum = distances[0], distances[1], distances[2]
 
     min_val = min(min(np.min(distances_center), np.min(distances_icp)), np.min(distances))
@@ -505,7 +507,7 @@ def create_distances_between_alignments(patient):
     fig.add_trace(go.Bar(x=np.array(range(1, 14)), y=bladder, name="Bladder"))
     fig.add_trace(go.Bar(x=np.array(range(1, 14)), y=rectum, name="Rectum"))
     fig.update_xaxes(title_text="Timestamp", tick0=0, dtick=1)
-    fig.update_yaxes(title_text="Distance", tick0=0, dtick=2, range=[min_val - 1, max_val + 1])
+    fig.update_yaxes(title_text="Distance", tick0=0, dtick=2)   # , range=[min_val - 1, max_val + 1]
     fig.update_layout(title_x=0.5, font=dict(size=14), title_y=0.90)
 
     return fig
@@ -521,7 +523,7 @@ for patient in PATIENTS:
     avrg_rectum_icp.append(rectum)
 
 
-def create_patients_icp():
+def average_distances_icp():
     layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)', margin=dict(t=80, b=70,
                                                                                                            l=90, r=81),
                        plot_bgcolor='rgba(70,70,70,1)', width=680, height=350, showlegend=True,
@@ -544,56 +546,7 @@ def create_patients_icp():
     return fig
 
 
-def heatmap_icp():
-    layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)', margin=dict(t=80, b=70,
-                       l=90, r=81), plot_bgcolor='rgba(70,70,70,1)', width=680, height=350, showlegend=True,
-                       title=dict(text="Movements of patients' prostates after ICP aligning",
-                                  font=dict(size=18, color='lightgrey')))
-
-    prostate_data = [patient[0] for patient in all_distances_icp]
-    # bladder_data = [patient[1] for patient in all_distances_icp]
-    # rectum_data = [patient[2] for patient in all_distances_icp]
-    fig = go.Figure(data=go.Heatmap(z=prostate_data, x=TIMESTAMPS, y=PATIENTS), layout=layout)
-    # fig.add_trace(go.Heatmap(z=bladder_data, x=TIMESTAMPS, y=PATIENTS))
-    # fig.add_trace(go.Heatmap(z=rectum_data, x=TIMESTAMPS, y=PATIENTS))
-
-    fig.update_xaxes(title_text="Timestamps", tick0=1, dtick=1)
-    fig.update_yaxes(title_text="Patients")
-    fig.update_layout(title_x=0.5, font=dict(size=14), title_y=0.90)
-    fig.update_coloraxes(colorbar_dtick=1)
-
-    return fig
-
-
-avrg_prostate_cent, avrg_bladder_cent, avrg_rectum_cent, all_distances_center = [], [], [], []
-
-for patient in PATIENTS:
-    distances_center = Project_2.compute_distances_after_centering(patient)
-    all_distances_center.append(distances_center)
-    prostate, bladder, rectum = Project_2.compute_average_distances(distances_center)
-    avrg_prostate_cent.append(prostate)
-    avrg_bladder_cent.append(bladder)
-    avrg_rectum_cent.append(rectum)
-
-
-def heatmap_centering():
-    layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)', margin=dict(t=80, b=70,
-                       l=90, r=81), plot_bgcolor='rgba(70,70,70,1)', width=680, height=350, showlegend=True,
-                       title=dict(text="Movements of patients' bladders after centering on prostate",
-                                  font=dict(size=18, color='lightgrey')))
-
-    bladder_data = [patient[1] for patient in all_distances_center]
-    fig = go.Figure(data=go.Heatmap(z=bladder_data, x=TIMESTAMPS, y=PATIENTS), layout=layout)
-
-    fig.update_xaxes(title_text="Timestamps", tick0=1, dtick=1)
-    fig.update_yaxes(title_text="Patients")
-    fig.update_layout(title_x=0.5, font=dict(size=14), title_y=0.90)
-    fig.update_coloraxes(colorbar_dtick=1, colorbar_tick0=0)
-
-    return fig
-
-
-def create_patients_center():
+def average_distances_center():
     layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)', margin=dict(t=80, b=70,
                                                                                                            l=90, r=81),
                        plot_bgcolor='rgba(70,70,70,1)', width=680, height=350, showlegend=True,
@@ -617,7 +570,135 @@ def create_patients_center():
     return fig
 
 
+def resolve_click_data(icp, center):
+    input_id = callback_context.triggered[0]["prop_id"].split(".")[0]
+    if input_id == "heatmap-icp":
+        return icp
+    elif input_id == "heatmap-center":
+        return center
+    return None
+
+
+@app.callback(
+    Output("heatmap-icp", "figure"),
+    Input("heatmap-icp", "clickData"),
+    Input("heatmap-center", "clickData"))
+def heatmap_icp(click_data, center_click_data):
+    layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)',
+                       margin=dict(t=80, b=70, l=90, r=81),
+                       plot_bgcolor='rgba(70,70,70,1)', width=1420, height=350, showlegend=True,
+                       title=dict(text="Movements of patients' organs after ICP aligning",
+                                  font=dict(size=18, color='lightgrey')))
+
+    # data is 2d array with distances for the heightmap, custom_data and hover_text are used just for hover labels
+    data, custom_data, hover_text = [], [], []
+    for i in range(len(PATIENTS)):
+        # patient contains three arrays: prostate, bladder, rectum with distances from all the timestamps
+        patient = all_distances_icp[i]
+        data_row, custom_row, hover_row = [], [], []
+
+        for j in range(len(TIMESTAMPS)):
+            data_row.extend([patient[0][j], patient[1][j], patient[2][j]])
+            custom_row.extend([j + 1, j + 1, j + 1])
+            hover_row.extend(["Prostate", "Bladder", "Rectum"])
+
+        data.append(data_row)
+        custom_data.append(custom_row)
+        hover_text.append(hover_row)
+
+    fig = go.Figure(data=go.Heatmap(z=data, text=hover_text, customdata=custom_data,
+                                    hovertemplate="<b>%{text}</b><br>Patient: %{y}<br>Timestamp: %{customdata}<br>"
+                                                  "Distance: %{z:.2f}<extra></extra>", colorscale="Portland"), layout=layout)
+    # create borders around cells
+    for i in range(1, 13):
+        fig.add_vline(x=3 * i - 0.5, line_width=3)
+
+    for i in range(1, 8):
+        fig.add_hline(y=i - 0.5, line_width=5)
+
+    # highlight the selected cell
+    click_data = resolve_click_data(click_data, center_click_data)
+    if click_data:
+        cell = click_data["points"][0]
+        fig.add_shape(type="rect", x0=cell["x"]-0.43, y0=cell["y"]-0.41, x1=cell["x"]+0.43, y1=cell["y"]+0.41,
+                      line_color="white", line_width=4)
+
+    fig.update_xaxes(title_text="Timestamps", ticktext=TIMESTAMPS, tickmode="array", tickvals=np.arange(1, 39, 3),
+                     zeroline=False, showgrid=False)
+    fig.update_yaxes(title_text="Patients", ticktext=PATIENTS, tickmode="array", tickvals=np.arange(0, 8, 1),
+                     zeroline=False, showgrid=False)
+    fig.update_layout(title_x=0.5, font=dict(size=14), title_y=0.90)
+    fig.update_coloraxes(colorbar_dtick=1)
+
+    return fig
+
+
+avrg_prostate_cent, avrg_bladder_cent, avrg_rectum_cent, all_distances_center = [], [], [], []
+
+for patient in PATIENTS:
+    distances_center = Project_2.compute_distances_after_centering(patient)
+    all_distances_center.append(distances_center)
+    prostate, bladder, rectum = Project_2.compute_average_distances(distances_center)
+    avrg_prostate_cent.append(prostate)
+    avrg_bladder_cent.append(bladder)
+    avrg_rectum_cent.append(rectum)
+
+
+@app.callback(
+    Output("heatmap-center", "figure"),
+    Input("heatmap-center", "clickData"),
+    Input("heatmap-icp", "clickData"))
+def heatmap_centering(click_data, icp_click_data):
+    layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)', margin=dict(t=80, b=70,
+                                                                                                           l=90, r=81),
+                       plot_bgcolor='rgba(70,70,70,1)', width=1420, height=350, showlegend=True,
+                       title=dict(text="Movements of patients' organs after centering on prostate",
+                                  font=dict(size=18, color='lightgrey')))
+
+    # data is 2d array with distances for the heightmap, custom_data and hover_text are used just for hover labels
+    data, custom_data, hover_text = [], [], []
+    for i in range(len(PATIENTS)):
+        # patient contains three arrays: prostate, bladder, rectum with distances from all the timestamps
+        patient = all_distances_center[i]
+        data_row, custom_row, hover_row = [], [], []
+
+        for j in range(len(TIMESTAMPS)):
+            data_row.extend([patient[3][j], patient[1][j], patient[2][j]])
+            custom_row.extend([j + 1, j + 1, j + 1])
+            hover_row.extend(["Bones", "Bladder", "Rectum"])
+
+        data.append(data_row)
+        custom_data.append(custom_row)
+        hover_text.append(hover_row)
+
+    fig = go.Figure(data=go.Heatmap(z=data, text=hover_text, customdata=custom_data,
+                                    hovertemplate="<b>%{text}</b><br>Patient: %{y}<br>Timestamp: %{customdata}<br>"
+                                                  "Distance: %{z:.2f}<extra></extra>",
+                                    colorscale="Portland"), layout=layout)   # [[0, BLUE], [0.5, RED], [1, GREEN]]
+    for i in range(1, 13):
+        fig.add_vline(x=3 * i - 0.5, line_width=3)
+
+    for i in range(1, 8):
+        fig.add_hline(y=i - 0.5, line_width=5)
+
+    # highlight the selected cell
+    click_data = resolve_click_data(icp_click_data, click_data)
+    if click_data:
+        cell = click_data["points"][0]
+        fig.add_shape(type="rect", x0=cell["x"] - 0.43, y0=cell["y"] - 0.41, x1=cell["x"] + 0.43,
+                      y1=cell["y"] + 0.41,
+                      line_color="white", line_width=4)
+
+    fig.update_xaxes(title_text="Timestamps", ticktext=TIMESTAMPS, tickmode="array", tickvals=np.arange(1, 39, 3),
+                     zeroline=False, showgrid=False)
+    fig.update_yaxes(title_text="Patients", ticktext=PATIENTS, tickmode="array", tickvals=np.arange(0, 8, 1),
+                     zeroline=False, showgrid=False)
+    fig.update_layout(title_x=0.5, font=dict(size=14), title_y=0.90)
+    fig.update_coloraxes(colorbar_dtick=1)
+
+    return fig
+
+
 if __name__ == '__main__':
     main()
     app.run_server(debug=True)
-
