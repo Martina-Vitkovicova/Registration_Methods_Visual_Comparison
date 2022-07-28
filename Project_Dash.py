@@ -469,7 +469,7 @@ def create_distances_after_icp(dropdown, click_data, center_click_data, differen
 
         # colors1[x], colors2[x], colors3[x] = "white", "white", "white"
 
-    distances_icp = Project_2.compute_distances_after_icp(patient_id)
+    distances_icp = all_distances_icp[PATIENTS.index(patient_id)]
     prostate, bladder, rectum = distances_icp[0], distances_icp[1], distances_icp[2]
 
     layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)',
@@ -528,7 +528,7 @@ def create_distances_after_centering(dropdown, icp_click_data, click_data, diffe
         elif click_id == "average-icp" or click_id == "average-center":
             patient_id = data["x"]
 
-    distances_center = Project_2.compute_distances_after_centering(patient_id)
+    distances_center = all_distances_center[PATIENTS.index(patient_id)]
     prostate, bladder, rectum, bones = distances_center[0], distances_center[1], distances_center[2], distances_center[3]
 
     layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)',
@@ -538,9 +538,9 @@ def create_distances_after_centering(dropdown, icp_click_data, click_data, diffe
                            text="Distances of the centered organs and the plan organs of patient {}".format(patient_id),
                            font=dict(size=18, color='lightgrey')))
     fig = go.Figure(layout=layout)
-    fig.add_trace(go.Scatter(x=np.array(range(1, 14)), y=prostate, mode="lines+markers", name="Prostate"))
-    fig.add_trace(go.Scatter(x=np.array(range(1, 14)), y=bladder, mode="lines+markers", name="Bladder"))
-    fig.add_trace(go.Scatter(x=np.array(range(1, 14)), y=rectum, mode="lines+markers", name="Rectum"))
+    fig.add_trace(go.Scattergl(x=np.array(range(1, 14)), y=prostate, mode="lines+markers", name="Prostate"))
+    fig.add_trace(go.Scattergl(x=np.array(range(1, 14)), y=bladder, mode="lines+markers", name="Bladder"))
+    fig.add_trace(go.Scattergl(x=np.array(range(1, 14)), y=rectum, mode="lines+markers", name="Rectum"))
     fig.update_xaxes(title_text="Timestamp", tick0=0, dtick=1)
     fig.update_yaxes(title_text="Distance", tick0=0, dtick=2)
     fig.update_layout(title_x=0.5, font=dict(size=14), title_y=0.90)
@@ -623,12 +623,22 @@ def create_distances_between_alignments(patient, differences, organs_icp, organs
 
 avrg_prostate_icp, avrg_bladder_icp, avrg_rectum_icp, all_distances_icp = [], [], [], []
 for pat in PATIENTS:
-    distances_icp = Project_2.compute_distances_after_icp(pat)
-    all_distances_icp.append(distances_icp)
-    prostate, bladder, rectum = Project_2.compute_average_distances(distances_icp)
+    dist_icp = Project_2.compute_distances_after_icp(pat)
+    all_distances_icp.append(dist_icp)
+    prostate, bladder, rectum = Project_2.compute_average_distances(dist_icp)
     avrg_prostate_icp.append(prostate)
     avrg_bladder_icp.append(bladder)
     avrg_rectum_icp.append(rectum)
+
+avrg_prostate_cent, avrg_bladder_cent, avrg_rectum_cent, all_distances_center = [], [], [], []
+
+for pat in PATIENTS:
+    dist_center = Project_2.compute_distances_after_centering(pat)
+    all_distances_center.append(dist_center)
+    prostate, bladder, rectum = Project_2.compute_average_distances(dist_center)
+    avrg_prostate_cent.append(prostate)
+    avrg_bladder_cent.append(bladder)
+    avrg_rectum_cent.append(rectum)
 
 
 @app.callback(
@@ -797,17 +807,6 @@ def heatmap_icp(organs_icp, organs_center, differences, click_data, center_click
     fig.update_coloraxes(colorbar_dtick=1)
 
     return fig
-
-
-avrg_prostate_cent, avrg_bladder_cent, avrg_rectum_cent, all_distances_center = [], [], [], []
-
-for pat in PATIENTS:
-    distances_center = Project_2.compute_distances_after_centering(pat)
-    all_distances_center.append(distances_center)
-    prostate, bladder, rectum = Project_2.compute_average_distances(distances_center)
-    avrg_prostate_cent.append(prostate)
-    avrg_bladder_cent.append(bladder)
-    avrg_rectum_cent.append(rectum)
 
 
 @app.callback(
