@@ -36,7 +36,7 @@ def main():
                          id="patient-dropdown", style={'display': 'inline-block', "width": "80px", "font-size": "16px",
                                                        "padding": "20px 80px 0px 85px"}),
 
-            dcc.Graph(id="organs-icp", style={'display': 'inline-block', "padding": "30px 30px 30px 40px"}),
+            dcc.Loading([dcc.Graph(id="organs-icp", style={'display': 'inline-block', "padding": "30px 30px 30px 40px"})], type="circle"),
 
             dcc.Graph(id="alignment-differences", style={"padding": "0px 0px 30px 40px"}),
 
@@ -147,18 +147,20 @@ def options_visibility(mode):
     Output("main-graph", "figure"),
     Input("patient-dropdown", "value"),
     Input("alignment-radioitems", "value"),
-    Input("organs-icp", "clickData"),
-    Input("organs-center", "clickData"),
     Input("organs-checklist", "value"),
     Input("mode-radioitems", "value"),
     Input("fst-timestamp-dropdown", "value"),
     Input("snd-timestamp-dropdown", "value"),
-    Input("opacity-slider", "value"))
-def update_3dgraph(patient, alignment_radioitems, icp_click_data, center_click_data, organs, mode, fst_timestamp,
-                   snd_timestamp, opacity_slider):
-    timestamp = timestamp_click_data(icp_click_data, center_click_data)
-    objects_fst = import_selected_organs(organs, fst_timestamp, patient)
-    objects_snd = import_selected_organs(organs, snd_timestamp, patient)
+    Input("opacity-slider", "value"),
+    Input("average-icp", "clickData"),
+    Input("average-center", "clickData"),
+    Input("heatmap-icp", "clickData"),
+    Input("heatmap-center", "clickData"))
+def update_3dgraph(patient, alignment_radioitems, organs, mode, fst_timestamp, snd_timestamp, opacity_slider,
+                   average_icp, average_center, heatmap_icp, heatmap_center):
+    global patient_id
+    objects_fst = import_selected_organs(organs, fst_timestamp, patient_id)
+    objects_snd = import_selected_organs(organs, snd_timestamp, patient_id)
     fst_meshes, snd_meshes, center1_after, center2_after = [], [], [], []
 
     camera = dict(up=dict(x=0, y=0, z=1), center=dict(x=0, y=0, z=0), eye=dict(x=0.5, y=-2, z=0))
@@ -169,23 +171,23 @@ def update_3dgraph(patient, alignment_radioitems, icp_click_data, center_click_d
 
     if "Two timestamps" in mode:
         if "ICP" in alignment_radioitems:
-            meshes, center1_before, center1_after = get_meshes_after_icp(fst_timestamp, objects_fst, patient)
+            meshes, center1_before, center1_after = get_meshes_after_icp(fst_timestamp, objects_fst, patient_id)
             fst_meshes.extend(meshes)
-            meshes, center2_before, center2_after = get_meshes_after_icp(snd_timestamp, objects_snd, patient, "orange")
+            meshes, center2_before, center2_after = get_meshes_after_icp(snd_timestamp, objects_snd, patient_id, "orange")
             snd_meshes.extend(meshes)
 
         if "Center point" in alignment_radioitems:
-            meshes, center1_before, center1_after = get_meshes_after_centering(fst_timestamp, objects_fst, patient,
+            meshes, center1_before, center1_after = get_meshes_after_centering(fst_timestamp, objects_fst, patient_id,
                                                                                BLUE)
             fst_meshes.extend(meshes)
-            meshes, center2_before, center2_after = get_meshes_after_centering(snd_timestamp, objects_snd, patient)
+            meshes, center2_before, center2_after = get_meshes_after_centering(snd_timestamp, objects_snd, patient_id)
             snd_meshes.extend(meshes)
         x1, y1, z1 = center1_after[0][0][0]
         x2, y2, z2 = center2_after[0][0][0]
         fig.add_trace(go.Scatter3d(x=[x1, x2], y=[y1, y2], z=[z1, z2]))
 
     else:
-        objects = import_selected_organs(organs, "_plan", patient)
+        objects = import_selected_organs(organs, "_plan", patient_id)
         fst_meshes = create_meshes_from_objs(objects, BLUE)
 
     for mesh in fst_meshes:
@@ -201,7 +203,7 @@ def update_3dgraph(patient, alignment_radioitems, icp_click_data, center_click_d
 
         fig.add_trace(mesh)
     fig.update_layout(title_text="Patient {}, timestamp number {} (blue) and number {} (orange)"
-                      .format(patient, fst_timestamp, snd_timestamp), title_x=0.5,
+                      .format(patient_id, fst_timestamp, snd_timestamp), title_x=0.5,
                       title_y=0.95)
 
     # fig.add_trace(go.Scatter3d(x=[0, 20], y=[0, 0], z=[50, 50]))
@@ -441,33 +443,31 @@ def add_planes(point, normal):
     Input("patient-dropdown", "value"),
     Input("organs-icp", "clickData"),
     Input("organs-center", "clickData"),
+    Input("alignment-differences", "clickData"),
     Input("average-icp", "clickData"),
     Input("average-center", "clickData"),
     Input("heatmap-icp", "clickData"),
     Input("heatmap-center", "clickData"))
-def create_distances_after_icp(dropdown, click_data, center_click_data, average_icp, average_center,
+def create_distances_after_icp(dropdown, click_data, center_click_data, differences, average_icp, average_center,
                                heatmap_icp, heatmap_center):
     global patient_id
-    all_click_data = [click_data, center_click_data, average_icp, average_center, heatmap_icp, heatmap_center]
-    all_ids = ["organs-icp", "organs-center", "average-icp", "average-center", "heatmap-icp", "heatmap-center"]
-    click_data = resolve_click_data(all_click_data, all_ids)
-    flag = 1
+    all_click_data = [click_data, center_click_data, differences, average_icp, average_center,
+                      heatmap_icp, heatmap_center]
+    all_ids = ["organs-icp", "organs-center", "alignment-differences", "average-icp", "average-center",
+               "heatmap-icp", "heatmap-center"]
+    click_data, click_id = resolve_click_data(all_click_data, all_ids)
     colors1, colors2, colors3 = [LIGHT_BLUE] * 13, [GREEN] * 13, [RED] * 13
 
     if click_data:
-        print(click_data)
-        x = int(click_data["points"][0]["x"]) - 1
         data = click_data["points"][0]
-        # we clicked on the heatmaps
-        if "pointNumber" not in data:
+        if "heatmap" in click_id:
             patient_id = PATIENTS[data["y"]]
             flag = 0
-            x = int(click_data["points"][0]["x"]) // 3
-        # we clicked on the average graphs
-        elif int(data["x"]) > 100:
+        elif "average" in click_id:
             patient_id = data["x"]
             flag = 2
-        colors1[x], colors2[x], colors3[x] = "white", "white", "white"
+
+        # colors1[x], colors2[x], colors3[x] = "white", "white", "white"
 
     distances_icp = Project_2.compute_distances_after_icp(patient_id)
     prostate, bladder, rectum = distances_icp[0], distances_icp[1], distances_icp[2]
@@ -479,26 +479,26 @@ def create_distances_after_icp(dropdown, click_data, center_click_data, average_
                            text="Distances of icp aligned organs and the plan organs of patient {}".format(patient_id),
                            font=dict(size=18, color='lightgrey')))
     fig = go.Figure(layout=layout)
-    fig.add_trace(go.Scattergl(x=np.array(range(1, 14)), y=prostate, mode="lines+markers", name="Prostate", marker_color=colors1))
-    fig.add_trace(go.Scattergl(x=np.array(range(1, 14)), y=bladder, mode="lines+markers", name="Bladder", marker_color=colors2))
-    fig.add_trace(go.Scattergl(x=np.array(range(1, 14)), y=rectum, mode="lines+markers", name="Rectum", marker_color=colors3))
+    fig.add_trace(go.Scattergl(x=np.array(range(1, 14)), y=prostate, mode="lines+markers", name="Prostate"))
+    fig.add_trace(go.Scattergl(x=np.array(range(1, 14)), y=bladder, mode="lines+markers", name="Bladder"))
+    fig.add_trace(go.Scattergl(x=np.array(range(1, 14)), y=rectum, mode="lines+markers", name="Rectum"))
     fig.update_xaxes(title_text="Timestamp", tick0=0, dtick=1)
     fig.update_yaxes(title_text="Distance", tick0=0, dtick=2)
     fig.update_layout(title_x=0.5, font=dict(size=14), title_y=0.90)
 
-    # if click_data and flag < 2:
-    #     if flag == 1:
-    #         x = int(click_data["points"][0]["x"])
-    #     if flag == 0:
-    #         x = int(click_data["points"][0]["x"]) // 3 + 1
-    #     fig.add_trace(
-    #         go.Scattergl(x=[x], y=[prostate[x - 1]], mode="lines+markers", name="Prostate", showlegend=False,
-    #                      marker=dict(size=10, color="white")))
-    #     fig.add_trace(
-    #         go.Scattergl(x=[x], y=[bladder[x - 1]], mode="lines+markers", name="Bladder", showlegend=False,
-    #                      marker=dict(size=10, color="white")))
-    #     fig.add_trace(go.Scattergl(x=[x], y=[rectum[x - 1]], mode="lines+markers", name="Rectum", showlegend=False,
-    #                                marker=dict(size=10, color="white")))
+    if click_data and "average" not in click_id:
+        if "organs" in click_id or "alignment-differences" in click_id:
+            x = int(click_data["points"][0]["x"])
+        if "heatmap" in click_id:
+            x = int(click_data["points"][0]["x"]) // 3 + 1
+        fig.add_trace(
+            go.Scattergl(x=[x], y=[prostate[x - 1]], mode="lines+markers", name="Prostate", showlegend=False,
+                         marker=dict(size=10, color="white")))
+        fig.add_trace(
+            go.Scattergl(x=[x], y=[bladder[x - 1]], mode="lines+markers", name="Bladder", showlegend=False,
+                         marker=dict(size=10, color="white")))
+        fig.add_trace(go.Scattergl(x=[x], y=[rectum[x - 1]], mode="lines+markers", name="Rectum", showlegend=False,
+                                   marker=dict(size=10, color="white")))
 
     return fig
 
@@ -508,29 +508,25 @@ def create_distances_after_icp(dropdown, click_data, center_click_data, average_
     Input("patient-dropdown", "value"),
     Input("organs-icp", "clickData"),
     Input("organs-center", "clickData"),
+    Input("alignment-differences", "clickData"),
     Input("average-icp", "clickData"),
     Input("average-center", "clickData"),
     Input("heatmap-icp", "clickData"),
     Input("heatmap-center", "clickData"))
-def create_distances_after_centering(dropdown, icp_click_data, click_data, average_icp, average_center,
+def create_distances_after_centering(dropdown, icp_click_data, click_data, differences, average_icp, average_center,
                                heatmap_icp, heatmap_center):
     global patient_id
-    all_click_data = [icp_click_data, click_data, average_icp, average_center, heatmap_icp, heatmap_center]
-    all_ids = ["organs-icp", "organs-center", "average-icp", "average-center", "heatmap-icp", "heatmap-center"]
-    click_data = resolve_click_data(all_click_data, all_ids)
-    flag = 1
+    all_click_data = [icp_click_data, click_data, differences, average_icp, average_center, heatmap_icp, heatmap_center]
+    all_ids = ["organs-icp", "organs-center", "alignment-differences", "average-icp", "average-center",
+               "heatmap-icp", "heatmap-center"]
+    click_data, click_id = resolve_click_data(all_click_data, all_ids)
 
     if click_data:
-        print(click_data)
         data = click_data["points"][0]
-        # we clicked on the heatmaps
-        if "pointNumber" not in data:
+        if click_id == "heatmap-icp" or click_id == "heatmap-center":
             patient_id = PATIENTS[data["y"]]
-            flag = 0
-        # we clicked on the average graphs
-        elif int(data["x"]) > 100:
+        elif click_id == "average-icp" or click_id == "average-center":
             patient_id = data["x"]
-            flag = 2
 
     distances_center = Project_2.compute_distances_after_centering(patient_id)
     prostate, bladder, rectum, bones = distances_center[0], distances_center[1], distances_center[2], distances_center[3]
@@ -549,10 +545,10 @@ def create_distances_after_centering(dropdown, icp_click_data, click_data, avera
     fig.update_yaxes(title_text="Distance", tick0=0, dtick=2)
     fig.update_layout(title_x=0.5, font=dict(size=14), title_y=0.90)
 
-    if click_data and flag < 2:
-        if flag == 1:
+    if click_data and "average" not in click_id:
+        if "organs" in click_id or "alignment-differences" in click_id:
             x = int(click_data["points"][0]["x"])
-        if flag == 0:
+        if "heatmap" in click_id:
             x = int(click_data["points"][0]["x"]) // 3 + 1
         fig.add_trace(
             go.Scattergl(x=[x], y=[prostate[x - 1]], mode="lines+markers", name="Prostate", showlegend=False,
@@ -569,13 +565,14 @@ def create_distances_after_centering(dropdown, icp_click_data, click_data, avera
 @app.callback(
     Output("alignment-differences", "figure"),
     Input("patient-dropdown", "value"),
+    Input("alignment-differences", "clickData"),
     Input("organs-icp", "clickData"),
     Input("organs-center", "clickData"),
     Input("average-icp", "clickData"),
     Input("average-center", "clickData"),
     Input("heatmap-icp", "clickData"),
     Input("heatmap-center", "clickData"))
-def create_distances_between_alignments(patient, organs_icp, organs_center, average_icp, average_center,
+def create_distances_between_alignments(patient, differences, organs_icp, organs_center, average_icp, average_center,
                                heatmap_icp, heatmap_center):
     global patient_id
     dist_icp = all_distances_icp[PATIENTS.index(patient_id)]
@@ -588,17 +585,19 @@ def create_distances_between_alignments(patient, organs_icp, organs_center, aver
     # min_val = min(min(np.min(distances_center), np.min(distances_icp)), np.min(distances))
     # max_val = max(max(np.max(distances_center), np.max(distances_icp)), np.max(distances))
 
-    all_click_data = [organs_icp, organs_center, average_icp, average_center, heatmap_icp, heatmap_center]
-    all_ids = ["organs-icp", "organs-center", "average-icp", "average-center", "heatmap-icp", "heatmap-center"]
-    click_data = resolve_click_data(all_click_data, all_ids)
+    all_click_data = [differences, organs_icp, organs_center, average_icp, average_center, heatmap_icp, heatmap_center]
+    all_ids = ["alignment-differences", "organs-icp", "organs-center", "average-icp", "average-center",
+               "heatmap-icp", "heatmap-center"]
+    click_data, click_id = resolve_click_data(all_click_data, all_ids)
 
-    if click_data and (int(click_data["points"][0]["x"]) < 100 or "pointNumber" not in click_data["points"][0]):
+    if click_data:
         data = click_data["points"][0]
-        if "pointNumber" not in data:
+        if "heatmap" in click_id:
             x = int(click_data["points"][0]["x"]) // 3
-        elif int(data["x"]) < 100:
+            colors1[x], colors2[x], colors3[x] = "white", "white", "white"
+        elif "organs" in click_id or click_id == "alignment-differences":
             x = int(data["x"]) - 1
-        colors1[x], colors2[x], colors3[x] = "white", "white", "white"
+            colors1[x], colors2[x], colors3[x] = "white", "white", "white"
 
         # fig['data'][0]['marker']['color'][click_data['points'][0]['pointNumber']] = 'red'
         # fig.add_trace(go.Bar(x=[x], y=[prostate[x-1]], name="Prostate", marker_color="white", showlegend=False))
@@ -623,8 +622,8 @@ def create_distances_between_alignments(patient, organs_icp, organs_center, aver
 
 
 avrg_prostate_icp, avrg_bladder_icp, avrg_rectum_icp, all_distances_icp = [], [], [], []
-for patient in PATIENTS:
-    distances_icp = Project_2.compute_distances_after_icp(patient)
+for pat in PATIENTS:
+    distances_icp = Project_2.compute_distances_after_icp(pat)
     all_distances_icp.append(distances_icp)
     prostate, bladder, rectum = Project_2.compute_average_distances(distances_icp)
     avrg_prostate_icp.append(prostate)
@@ -655,17 +654,15 @@ def average_distances_icp(click_data, center_click_data, heatmap_icp, heatmap_ce
 
     all_click_data = [click_data, center_click_data, heatmap_icp, heatmap_center]
     all_ids = ["average-icp", "average-center", "heatmap-icp", "heatmap-center"]
-    click_data = resolve_click_data(all_click_data, all_ids)
+    click_data, click_id = resolve_click_data(all_click_data, all_ids)
 
     # highlight data
     if click_data:
         data = click_data["points"][0]
-        # we clicked on average graphs
-        print(click_data)
-        if "pointNumber" in data:
-            x, y = [data["x"]], PATIENTS.index(data["x"])
-        else:
+        if "heatmap" in click_id:
             x, y = [int(PATIENTS[data["y"]])], data["y"]
+        else:
+            x, y = [data["x"]], PATIENTS.index(data["x"])
         fig.add_trace(go.Scatter(x=x, y=[avrg_prostate_icp[y]], mode="markers", showlegend=False,
                                  name="Prostate", marker=dict(symbol="circle", color=LIGHT_BLUE,
                                  line=dict(width=3, color="white"))))
@@ -708,16 +705,15 @@ def average_distances_center(click_data, icp_click_data, heatmap_icp, heatmap_ce
 
     all_click_data = [icp_click_data, click_data, heatmap_icp, heatmap_center]
     all_ids = ["average-icp", "average-center", "heatmap-icp", "heatmap-center"]
-    click_data = resolve_click_data(all_click_data, all_ids)
+    click_data, click_id = resolve_click_data(all_click_data, all_ids)
 
     # highlight data
     if click_data:
         data = click_data["points"][0]
-        # we clicked on average graphs
-        if "pointNumber" in data:
-            x, y = [data["x"]], PATIENTS.index(data["x"])
-        else:
+        if "heatmap" in click_id:
             x, y = [int(PATIENTS[data["y"]])], data["y"]
+        else:
+            x, y = [data["x"]], PATIENTS.index(data["x"])
         fig.add_trace(go.Scatter(x=x, y=[avrg_prostate_cent[y]], mode="markers", showlegend=False,
                                  name="Prostate", marker=dict(symbol="circle", color=LIGHT_BLUE,
                                                               line=dict(width=3, color="white"))))
@@ -741,25 +737,139 @@ def resolve_click_data(click_data, ids):
     input_id = callback_context.triggered[0]["prop_id"].split(".")[0]
     for i, click_id in zip(range(len(ids)), ids):
         if input_id == click_id:
-            return click_data[i]
-    return None
+            return click_data[i], input_id
+    return None, None
 
 
 @app.callback(
     Output("heatmap-icp", "figure"),
     Input("organs-icp", "clickData"),
     Input("organs-center", "clickData"),
+    Input("alignment-differences", "clickData"),
     Input("heatmap-icp", "clickData"),
     Input("heatmap-center", "clickData"),
     Input("average-icp", "clickData"),
     Input("average-center", "clickData"))
-def heatmap_icp(organs_icp, organs_center, click_data, center_click_data, average_icp, average_center):
+def heatmap_icp(organs_icp, organs_center, differences, click_data, center_click_data, average_icp, average_center):
     layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)',
                        margin=dict(t=80, b=70, l=90, r=81),
                        plot_bgcolor='rgba(70,70,70,1)', width=1420, height=350, showlegend=True,
                        title=dict(text="Movements of patients' organs after ICP aligning",
                                   font=dict(size=18, color='lightgrey')))
     global patient_id
+
+    data, custom_data, hover_text = create_data_for_heatmap_icp()
+
+    fig = go.Figure(data=go.Heatmap(z=data, text=hover_text, customdata=custom_data,
+                                    hovertemplate="<b>%{text}</b><br>Patient: %{y}<br>Timestamp: %{customdata}<br>"
+                                                  "Distance: %{z:.2f}<extra></extra>", colorscale="Portland"), layout=layout)
+    # create borders around cells
+    for i in range(1, 13):
+        fig.add_vline(x=3 * i - 0.5, line_width=3)
+
+    for i in range(1, 8):
+        fig.add_hline(y=i - 0.5, line_width=5)
+
+    # highlight the selected cell
+    all_click_data = [organs_icp, organs_center, differences, average_icp, average_center, click_data, center_click_data]
+    all_ids = ["organs-icp", "organs-center", "alignment-differences", "average-icp", "average-center",
+               "heatmap-icp", "heatmap-center"]
+    click_data, click_id = resolve_click_data(all_click_data, all_ids)
+
+    if click_data:
+        cell = click_data["points"][0]
+        if "heatmap" in click_id:
+            fig.add_shape(type="rect", x0=cell["x"] - 0.43, y0=cell["y"] - 0.41, x1=cell["x"] + 0.43,
+                          y1=cell["y"] + 0.41, line_color="white", line_width=4)
+        elif "average" in click_id:
+                y = PATIENTS.index(cell["x"])
+                fig.add_hrect(y0=y - 0.41, y1=y + 0.41, line_width=4, line_color="white")
+        else:
+            y = PATIENTS.index(patient_id)
+            fig.add_shape(type="rect", x0=cell["x"] * 3 - 3.43, y0=y - 0.41, x1=cell["x"] * 3 -0.57,
+                          y1=y + 0.41, line_color="white", line_width=4)
+
+    fig.update_xaxes(title_text="Timestamps", ticktext=TIMESTAMPS, tickmode="array", tickvals=np.arange(1, 39, 3),
+                     zeroline=False, showgrid=False)
+    fig.update_yaxes(title_text="Patients", ticktext=PATIENTS, tickmode="array", tickvals=np.arange(0, 8, 1),
+                     zeroline=False, showgrid=False)
+    fig.update_layout(title_x=0.5, font=dict(size=14), title_y=0.90)
+    fig.update_coloraxes(colorbar_dtick=1)
+
+    return fig
+
+
+avrg_prostate_cent, avrg_bladder_cent, avrg_rectum_cent, all_distances_center = [], [], [], []
+
+for pat in PATIENTS:
+    distances_center = Project_2.compute_distances_after_centering(pat)
+    all_distances_center.append(distances_center)
+    prostate, bladder, rectum = Project_2.compute_average_distances(distances_center)
+    avrg_prostate_cent.append(prostate)
+    avrg_bladder_cent.append(bladder)
+    avrg_rectum_cent.append(rectum)
+
+
+@app.callback(
+    Output("heatmap-center", "figure"),
+    Input("heatmap-center", "clickData"),
+    Input("heatmap-icp", "clickData"),
+    Input("alignment-differences", "clickData"),
+    Input("average-icp", "clickData"),
+    Input("average-center", "clickData"),
+    Input("organs-icp", "clickData"),
+    Input("organs-center", "clickData"))
+def heatmap_centering(click_data, icp_click_data, differences, average_icp, average_center, organs_icp, organs_center):
+    layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)', margin=dict(t=80, b=70,
+                                                                                                           l=90, r=81),
+                       plot_bgcolor='rgba(70,70,70,1)', width=1420, height=350, showlegend=True,
+                       title=dict(text="Movements of patients' organs after centering on prostate",
+                                  font=dict(size=18, color='lightgrey')))
+    global patient_id
+
+    data, custom_data, hover_text = create_data_for_heatmap_center()
+
+    fig = go.Figure(data=go.Heatmap(z=data, text=hover_text, customdata=custom_data,
+                                    hovertemplate="<b>%{text}</b><br>Patient: %{y}<br>Timestamp: %{customdata}<br>"
+                                                  "Distance: %{z:.2f}<extra></extra>",
+                                    colorscale="Portland"), layout=layout)   # [[0, BLUE], [0.5, RED], [1, GREEN]]
+    for i in range(1, 13):
+        fig.add_vline(x=3 * i - 0.5, line_width=3)
+
+    for i in range(1, 8):
+        fig.add_hline(y=i - 0.5, line_width=5)
+
+        # highlight the selected cell
+        all_click_data = [organs_icp, organs_center, differences, average_icp, average_center,
+                          icp_click_data, click_data]
+        all_ids = ["organs-icp", "organs-center", "alignment-differences", "average-icp", "average-center",
+                   "heatmap-icp", "heatmap-center"]
+        click_data, click_id = resolve_click_data(all_click_data, all_ids)
+
+        if click_data:
+            cell = click_data["points"][0]
+            if "heatmap" in click_id:
+                fig.add_shape(type="rect", x0=cell["x"] - 0.43, y0=cell["y"] - 0.41, x1=cell["x"] + 0.43,
+                              y1=cell["y"] + 0.41, line_color="white", line_width=4)
+            elif "average" in click_id:
+                y = PATIENTS.index(cell["x"])
+                fig.add_hrect(y0=y - 0.41, y1=y + 0.41, line_width=4, line_color="white")
+            else:
+                y = PATIENTS.index(patient_id)
+                fig.add_shape(type="rect", x0=cell["x"] * 3 - 3.43, y0=y - 0.41, x1=cell["x"] * 3 - 0.57,
+                              y1=y + 0.41, line_color="white", line_width=4)
+
+    fig.update_xaxes(title_text="Timestamps", ticktext=TIMESTAMPS, tickmode="array", tickvals=np.arange(1, 39, 3),
+                     zeroline=False, showgrid=False)
+    fig.update_yaxes(title_text="Patients", ticktext=PATIENTS, tickmode="array", tickvals=np.arange(0, 8, 1),
+                     zeroline=False, showgrid=False)
+    fig.update_layout(title_x=0.5, font=dict(size=14), title_y=0.90)
+    fig.update_coloraxes(colorbar_dtick=1)
+
+    return fig
+
+
+def create_data_for_heatmap_icp():
     # data is 2d array with distances for the heightmap, custom_data and hover_text are used just for hover labels
     data, custom_data, hover_text = [], [], []
     for i in range(len(PATIENTS)):
@@ -776,73 +886,10 @@ def heatmap_icp(organs_icp, organs_center, click_data, center_click_data, averag
         custom_data.append(custom_row)
         hover_text.append(hover_row)
 
-    fig = go.Figure(data=go.Heatmap(z=data, text=hover_text, customdata=custom_data,
-                                    hovertemplate="<b>%{text}</b><br>Patient: %{y}<br>Timestamp: %{customdata}<br>"
-                                                  "Distance: %{z:.2f}<extra></extra>", colorscale="Portland"), layout=layout)
-    # create borders around cells
-    for i in range(1, 13):
-        fig.add_vline(x=3 * i - 0.5, line_width=3)
-
-    for i in range(1, 8):
-        fig.add_hline(y=i - 0.5, line_width=5)
-
-    # highlight the selected cell
-    all_click_data = [organs_icp, organs_center, average_icp, average_center, click_data, center_click_data]
-    all_ids = ["organs-icp", "organs-center", "average-icp", "average-center", "heatmap-icp", "heatmap-center"]
-    click_data = resolve_click_data(all_click_data, all_ids)
-
-    if click_data:
-        cell = click_data["points"][0]
-        if "pointNumber" not in cell:
-            fig.add_shape(type="rect", x0=cell["x"] - 0.43, y0=cell["y"] - 0.41, x1=cell["x"] + 0.43,
-                          y1=cell["y"] + 0.41, line_color="white", line_width=4)
-        else:
-            # we clicked on average graphs
-            if int(cell["x"]) > 100:
-                y = PATIENTS.index(cell["x"])
-                fig.add_hrect(y0=y - 0.41, y1=y + 0.41, line_width=4, line_color="white")
-            else:
-                # we clicked on distances graphs
-                y = PATIENTS.index(patient_id)
-                fig.add_shape(type="rect", x0=cell["x"] * 3 - 3.43, y0=y - 0.41, x1=cell["x"] * 3 -0.57,
-                              y1=y + 0.41, line_color="white", line_width=4)
-
-    fig.update_xaxes(title_text="Timestamps", ticktext=TIMESTAMPS, tickmode="array", tickvals=np.arange(1, 39, 3),
-                     zeroline=False, showgrid=False)
-    fig.update_yaxes(title_text="Patients", ticktext=PATIENTS, tickmode="array", tickvals=np.arange(0, 8, 1),
-                     zeroline=False, showgrid=False)
-    fig.update_layout(title_x=0.5, font=dict(size=14), title_y=0.90)
-    fig.update_coloraxes(colorbar_dtick=1)
-
-    return fig
+    return data, custom_data, hover_text
 
 
-avrg_prostate_cent, avrg_bladder_cent, avrg_rectum_cent, all_distances_center = [], [], [], []
-
-for patient in PATIENTS:
-    distances_center = Project_2.compute_distances_after_centering(patient)
-    all_distances_center.append(distances_center)
-    prostate, bladder, rectum = Project_2.compute_average_distances(distances_center)
-    avrg_prostate_cent.append(prostate)
-    avrg_bladder_cent.append(bladder)
-    avrg_rectum_cent.append(rectum)
-
-
-@app.callback(
-    Output("heatmap-center", "figure"),
-    Input("heatmap-center", "clickData"),
-    Input("heatmap-icp", "clickData"),
-    Input("average-icp", "clickData"),
-    Input("average-center", "clickData"),
-    Input("organs-icp", "clickData"),
-    Input("organs-center", "clickData"))
-def heatmap_centering(click_data, icp_click_data, average_icp, average_center, organs_icp, organs_center):
-    layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)', margin=dict(t=80, b=70,
-                                                                                                           l=90, r=81),
-                       plot_bgcolor='rgba(70,70,70,1)', width=1420, height=350, showlegend=True,
-                       title=dict(text="Movements of patients' organs after centering on prostate",
-                                  font=dict(size=18, color='lightgrey')))
-    global patient_id
+def create_data_for_heatmap_center():
     # data is 2d array with distances for the heightmap, custom_data and hover_text are used just for hover labels
     data, custom_data, hover_text = [], [], []
     for i in range(len(PATIENTS)):
@@ -859,45 +906,7 @@ def heatmap_centering(click_data, icp_click_data, average_icp, average_center, o
         custom_data.append(custom_row)
         hover_text.append(hover_row)
 
-    fig = go.Figure(data=go.Heatmap(z=data, text=hover_text, customdata=custom_data,
-                                    hovertemplate="<b>%{text}</b><br>Patient: %{y}<br>Timestamp: %{customdata}<br>"
-                                                  "Distance: %{z:.2f}<extra></extra>",
-                                    colorscale="Portland"), layout=layout)   # [[0, BLUE], [0.5, RED], [1, GREEN]]
-    for i in range(1, 13):
-        fig.add_vline(x=3 * i - 0.5, line_width=3)
-
-    for i in range(1, 8):
-        fig.add_hline(y=i - 0.5, line_width=5)
-
-        # highlight the selected cell
-        all_click_data = [organs_icp, organs_center, average_icp, average_center, icp_click_data, click_data]
-        all_ids = ["organs-icp", "organs-center", "average-icp", "average-center", "heatmap-icp", "heatmap-center"]
-        click_data = resolve_click_data(all_click_data, all_ids)
-
-        if click_data:
-            cell = click_data["points"][0]
-            if "pointNumber" not in cell:
-                fig.add_shape(type="rect", x0=cell["x"] - 0.43, y0=cell["y"] - 0.41, x1=cell["x"] + 0.43,
-                              y1=cell["y"] + 0.41, line_color="white", line_width=4)
-            else:
-                # we clicked on average graphs
-                if int(cell["x"]) > 100:
-                    y = PATIENTS.index(cell["x"])
-                    fig.add_hrect(y0=y - 0.41, y1=y + 0.41, line_width=4, line_color="white")
-                else:
-                    # we clicked on distances graphs
-                    y = PATIENTS.index(patient_id)
-                    fig.add_shape(type="rect", x0=cell["x"] * 3 - 3.43, y0=y - 0.41, x1=cell["x"] * 3 - 0.57,
-                                  y1=y + 0.41, line_color="white", line_width=4)
-
-    fig.update_xaxes(title_text="Timestamps", ticktext=TIMESTAMPS, tickmode="array", tickvals=np.arange(1, 39, 3),
-                     zeroline=False, showgrid=False)
-    fig.update_yaxes(title_text="Patients", ticktext=PATIENTS, tickmode="array", tickvals=np.arange(0, 8, 1),
-                     zeroline=False, showgrid=False)
-    fig.update_layout(title_x=0.5, font=dict(size=14), title_y=0.90)
-    fig.update_coloraxes(colorbar_dtick=1)
-
-    return fig
+    return data, custom_data, hover_text
 
 
 if __name__ == '__main__':
