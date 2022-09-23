@@ -318,7 +318,7 @@ def compute_distances_after_icp(patient):
         for i in range(3):
             transf_organ_center = vertices_transformation(transform_matrix, [[[organs[i]]]])
             distances[i].append(numpy.linalg.norm(keys[i] - numpy.array(transf_organ_center)))
-            movement_vectors[i].append(np.ravel(keys[i] - numpy.array(transf_organ_center)))
+            movement_vectors[i].append((np.ravel(keys[i] - numpy.array(transf_organ_center))).tolist())
     # print("")
     # print_mov(movement_vectors)
 
@@ -354,7 +354,7 @@ def compute_distances_after_centering(patient):
         for i in range(3):
             transf_organ_center = vertices_transformation(transform_matrix, [[[organs[i]]]])
             distances[i].append(numpy.linalg.norm(keys[i] - numpy.array(transf_organ_center)))
-            movement_vectors[i].append(np.ravel(keys[i] - numpy.array(transf_organ_center)))
+            movement_vectors[i].append((np.ravel(keys[i] - numpy.array(transf_organ_center))).tolist())
 
     return distances, movement_vectors
 

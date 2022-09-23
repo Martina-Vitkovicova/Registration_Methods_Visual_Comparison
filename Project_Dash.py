@@ -5,6 +5,7 @@ import numpy as np
 import plotly.graph_objects as go
 import Project_2
 import Project_Dash_html
+import json
 
 FILEPATH = "C:\\Users\\vitko\\Desktop\\ProjetHCI\\Organs\\"
 PATIENTS = ["137", "146", "148", "198", "489", "579", "716", "722"]
@@ -66,13 +67,13 @@ def options_visibility(mode):
                 "height": "30px", "font-size": "16px", "padding": "0px 0px 0px 0px"}, \
                {'display': 'inline-block', "width": "50px",
                 "height": "30px", "font-size": "16px", "padding": "0px 0px 0px 30px"}, \
-               {'display': 'inline-block', "padding": "500px 0px 10px 0px"}, \
-               {'display': 'inline-block', "padding": "530px 0px 0px 30px"}, {'display': 'none'}, {'display': 'none'}
+               {'display': 'inline-block', "padding": "10px 0px 10px 0px"}, \
+               {'display': 'inline-block', "padding": "10px 0px 0px 30px"}, {'display': 'none'}, {'display': 'none'}
 
     else:
         return {'display': 'none'}, {'display': 'none'}, {'display': 'none'}, {'display': 'none'}, {'display': 'none'}, \
-               {'display': 'inline-block', "padding": "420px 0px 10px 0px"}, \
-               {'display': 'inline-block', "padding": "450px 0px 0px 30px"}, \
+               {}, \
+               {}, \
                {'display': 'inline-block', "font-size": "18px", "padding": "0px 100px 0px 12px"}, \
                {'display': 'inline-block', "padding": "0px 0px 0px 45px"}
 
@@ -99,7 +100,7 @@ def update_3dgraph(patient, alignment_radioitems, organs, mode, fst_timestamp, s
     fst_meshes, snd_meshes, center1_after, center2_after = [], [], [], []
 
     camera = dict(up=dict(x=0, y=0, z=1), center=dict(x=0, y=0, z=0), eye=dict(x=0.5, y=-2, z=0))
-    layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)', height=520, width=680,
+    layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)',
                        plot_bgcolor='rgba(50,50,50,1)', margin=dict(l=40, r=40, t=60, b=40), showlegend=True)
     fig = go.Figure(layout=layout)
     fig.update_layout(scene_camera=camera)
@@ -135,8 +136,9 @@ def update_3dgraph(patient, alignment_radioitems, organs, mode, fst_timestamp, s
         fst_meshes = create_meshes_from_objs(objects, BLUE)
         if "average" in mov:
             create_average_movement_lines(fig, organs)
-        else:
+        elif "all" in mov:
             draw_all_movements(fig, organs)
+
         fig.update_layout(title_text="Plan organs of patient {} with vectors of average movements"
                           .format(patient_id), title_x=0.5, title_y=0.95)
 
@@ -671,26 +673,24 @@ def create_distances_between_alignments(patient, differences, organs_icp, organs
     return fig
 
 
-avrg_prostate_icp, avrg_bladder_icp, avrg_rectum_icp, all_distances_icp, all_movements_icp = [], [], [], [], []
-for pat in PATIENTS:
-    dist_icp, mov_icp = Project_2.compute_distances_after_icp(pat)
-    all_distances_icp.append(dist_icp)
-    all_movements_icp.append(mov_icp)
-    prostate, bladder, rectum = Project_2.compute_average_distances(dist_icp)
-    avrg_prostate_icp.append(prostate)
-    avrg_bladder_icp.append(bladder)
-    avrg_rectum_icp.append(rectum)
+with open("icp_distances.txt", "r") as icp_dist, open("icp_movements.txt", "r") as icp_mov,\
+        open("icp_averages.txt", "r") as icp_avrg:
+    all_distances_icp = json.load(icp_dist)
+    all_movements_icp = json.load(icp_mov)
+    lines = icp_avrg.read().splitlines()
+    avrg_prostate_icp = list(map(float, lines[::3]))
+    avrg_bladder_icp = list(map(float, lines[1::3]))
+    avrg_rectum_icp = list(map(float, lines[2::3]))
 
-avrg_bones_cent, avrg_bladder_cent, avrg_rectum_cent, all_distances_center, all_movements_center = [], [], [], [], []
 
-for pat in PATIENTS:
-    dist_center, mov_center = Project_2.compute_distances_after_centering(pat)
-    all_distances_center.append(dist_center)
-    all_movements_center.append(mov_center)
-    bones, bladder, rectum = Project_2.compute_average_distances(dist_center)
-    avrg_bones_cent.append(bones)
-    avrg_bladder_cent.append(bladder)
-    avrg_rectum_cent.append(rectum)
+with open("center_distances.txt", "r") as center_dist, open("center_movements.txt", "r") as center_mov,\
+        open("center_averages.txt", "r") as center_avrg:
+    all_distances_center = json.load(center_dist)
+    all_movements_center = json.load(center_mov)
+    lines = center_avrg.read().splitlines()
+    avrg_bones_center = list(map(float, lines[::3]))
+    avrg_bladder_center = list(map(float, lines[1::3]))
+    avrg_rectum_center = list(map(float, lines[2::3]))
 
 
 def average_click_highlight(organ, icp):
@@ -788,11 +788,11 @@ def average_distances_center(click_data, icp_click_data, heatmap_icp, heatmap_ce
                                   font=dict(size=18, color='lightgrey')))
     fig = go.Figure(layout=layout)
 
-    fig.add_trace(go.Scatter(x=PATIENTS, y=avrg_bones_cent, mode="markers", name="Bones",
+    fig.add_trace(go.Scatter(x=PATIENTS, y=avrg_bones_center, mode="markers", name="Bones",
                              marker=dict(symbol="circle", color=PURPLE), line=dict(width=5)))
-    fig.add_trace(go.Scatter(x=PATIENTS, y=avrg_bladder_cent, mode="markers", name="Bladder",
+    fig.add_trace(go.Scatter(x=PATIENTS, y=avrg_bladder_center, mode="markers", name="Bladder",
                              marker=dict(symbol="square", color=GREEN), line=dict(width=5)))
-    fig.add_trace(go.Scatter(x=PATIENTS, y=avrg_rectum_cent, mode="markers", name="Rectum",
+    fig.add_trace(go.Scatter(x=PATIENTS, y=avrg_rectum_center, mode="markers", name="Rectum",
                              marker=dict(symbol="diamond", color=RED), line=dict(width=5)))
 
     all_click_data = [icp_click_data, click_data, heatmap_icp, heatmap_center]
@@ -806,13 +806,13 @@ def average_distances_center(click_data, icp_click_data, heatmap_icp, heatmap_ce
             x, y = [int(PATIENTS[data["y"]])], data["y"]
         else:
             x, y = [data["x"]], PATIENTS.index(data["x"])
-        fig.add_trace(go.Scatter(x=x, y=[avrg_bones_cent[y]], mode="markers", showlegend=False,
+        fig.add_trace(go.Scatter(x=x, y=[avrg_bones_center[y]], mode="markers", showlegend=False,
                                  name="Prostate", marker=dict(symbol="circle", color=PURPLE,
                                                               line=dict(width=3, color="white"))))
-        fig.add_trace(go.Scatter(x=x, y=[avrg_bladder_cent[y]], mode="markers", showlegend=False,
+        fig.add_trace(go.Scatter(x=x, y=[avrg_bladder_center[y]], mode="markers", showlegend=False,
                                  name="Bladder", marker=dict(symbol="square", color=GREEN,
                                                              line=dict(width=3, color="white"))))
-        fig.add_trace(go.Scatter(x=x, y=[avrg_rectum_cent[y]], mode="markers", showlegend=False,
+        fig.add_trace(go.Scatter(x=x, y=[avrg_rectum_center[y]], mode="markers", showlegend=False,
                                  name="Rectum", marker=dict(symbol="diamond", color=RED,
                                                             line=dict(width=3, color="white"))))
 
