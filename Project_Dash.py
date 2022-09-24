@@ -7,7 +7,7 @@ import Project_2
 import Project_Dash_html
 import json
 
-FILEPATH = "C:\\Users\\vitko\\Desktop\\ProjetHCI\\Organs\\"
+FILEPATH = "C:\\Users\\vitko\\Desktop\\ProjetHCI-BT\\Organs\\"
 PATIENTS = ["137", "146", "148", "198", "489", "579", "716", "722"]
 TIMESTAMPS = list(range(1, 14))
 
