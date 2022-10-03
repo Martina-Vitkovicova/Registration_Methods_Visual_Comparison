@@ -666,8 +666,8 @@ def create_distances_between_alignments(differences, organs_icp, organs_center, 
     return fig
 
 
-with open("icp_distances.txt", "r") as icp_dist, open("icp_movements.txt", "r") as icp_mov, \
-        open("icp_averages.txt", "r") as icp_avrg:
+with open("computations_files/icp_distances.txt", "r") as icp_dist, open("computations_files/icp_movements.txt", "r") \
+        as icp_mov, open("computations_files/icp_averages.txt", "r") as icp_avrg:
     all_distances_icp = json.load(icp_dist)
     all_movements_icp = json.load(icp_mov)
     lines = icp_avrg.read().splitlines()
@@ -675,8 +675,9 @@ with open("icp_distances.txt", "r") as icp_dist, open("icp_movements.txt", "r") 
     avrg_bladder_icp = list(map(float, lines[1::3]))
     avrg_rectum_icp = list(map(float, lines[2::3]))
 
-with open("center_distances.txt", "r") as center_dist, open("center_movements.txt", "r") as center_mov, \
-        open("center_averages.txt", "r") as center_avrg:
+with open("computations_files/center_distances.txt", "r") as center_dist, open(
+        "computations_files/center_movements.txt", "r") as center_mov, \
+        open("computations_files/center_averages.txt", "r") as center_avrg:
     all_distances_center = json.load(center_dist)
     all_movements_center = json.load(center_mov)
     lines = center_avrg.read().splitlines()

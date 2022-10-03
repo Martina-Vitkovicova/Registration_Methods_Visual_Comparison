@@ -33,10 +33,10 @@ def icp_transformation_matrices(other, key, print_out=False):
     rotation_m = list(R.from_matrix(rotation_m).as_euler('xyz', degrees=True))
 
     if print_out:
-        with open("rotation_icp.txt", "a") as file:
+        with open("old_project_files/rotation_icp.txt", "a") as file:
             file.write("x: {}, y: {}, z: {}\n".format(rotation_m[0], rotation_m[1], rotation_m[2]))
 
-        with open("translation_icp.txt", "a") as file:
+        with open("old_project_files/translation_icp.txt", "a") as file:
             file.write("x: {}, y: {}, z: {}\n".format(translation_m[0], translation_m[1], translation_m[2]))
 
         # print_matrix_info(rotation_m, translation_m)
@@ -205,7 +205,7 @@ def write_center_movements():
     in a file
     """
     key_center = find_center_point(plan[1][0])
-    with open("translation_center.txt", "a") as file:
+    with open("old_project_files/translation_center.txt", "a") as file:
         for entry in os.listdir(PATH + "\\137_prostate"):
             prostate = import_obj([PATH + "\\137_prostate\\{}".format(entry)])
             other_center = find_center_point(prostate[0][0])
@@ -232,7 +232,7 @@ def write_icp_center_movements():
     plan prostate center and translated prostates centers
     """
     plan_prostate_center = find_center_point(plan[1][0])
-    with open("translation_icp_center_prostates", "a") as file:
+    with open("old_project_files/translation_icp_center_prostates", "a") as file:
         for prostate, bone in zip(os.listdir(PATH + "\\137_prostate"), os.listdir(PATH + "\\137_bones")):
             bone = import_obj([PATH + "\\137_bones\\{}".format(bone)])
             transformation_matrix = icp_transformation_matrices(bone[0][0], plan[0][0])
