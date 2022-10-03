@@ -85,8 +85,13 @@ def options_visibility(mode):
     Input("fst-timestamp-dropdown", "value"),
     Input("snd-timestamp-dropdown", "value"),
     Input("opacity-slider", "value"),
+    Input("heatmap-icp", "clickData"),
+    Input("heatmap-center", "clickData"),
+    Input("average-icp", "clickData"),
+    Input("average-center", "clickData"),
     Input("movements-radioitems", "value"))
-def update_3dgraph(alignment_radioitems, organs, mode, fst_timestamp, snd_timestamp, opacity_slider, mov):
+def update_3dgraph(alignment_radioitems, organs, mode, fst_timestamp, snd_timestamp, opacity_slider,
+                   heatmap_icp, heatmap_center, average_icp, average_center, mov):
     global patient_id
     objects_fst = import_selected_organs(organs, fst_timestamp, patient_id)
     objects_snd = import_selected_organs(organs, snd_timestamp, patient_id)
@@ -120,6 +125,7 @@ def update_3dgraph(alignment_radioitems, organs, mode, fst_timestamp, snd_timest
         fig.add_trace(go.Cone(x=[x2], y=[y2], z=[z2],
                               u=[cone_tip * (x2 - x1)], v=[cone_tip * (y2 - y1)], w=[cone_tip * (z2 - z1)],
                               colorscale=[[0, "orange"], [1, "orange"]], showlegend=False, showscale=False))
+        print(patient_id)
         fig.update_layout(title_text="Patient {}, timestamp number {} (blue) and number {} (orange)"
                           .format(patient_id, fst_timestamp, snd_timestamp), title_x=0.5,
                           title_y=0.95)
@@ -476,7 +482,6 @@ def decide_organs_highlights(click_data, click_id, icp):
             colors[0], sizes[0] = ["white"] * 13, [10] * 13
 
     elif "organs" in click_id:
-        print(data)
         x = int(click_data["points"][0]["x"]) - 1
         if data["curveNumber"] != 0 or ("icp" in click_id and icp) or ("center" in click_id and not icp):
             colors[data["curveNumber"]][x], sizes[data["curveNumber"]][x] = "white", 10
@@ -693,6 +698,7 @@ def decide_average_highlights(data, click_id, icp):
             highlight = 3
         x, y = [int(PATIENTS[data["y"]])], data["y"]
     else:
+        print(patient_id)
         highlight = data["curveNumber"] + 1
         if "differences" in click_id:
             highlight = 2 if data["curveNumber"] == 0 else 3

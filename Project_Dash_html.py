@@ -13,7 +13,7 @@ layout = html.Div(className="row", children=[
                        "padding": "30px 0px 30px 0px"}),
 
         html.H6("""In radiotherapy, it is fundamental to position the patient before delivering the irradiation dose 
-        to both affect the tumor and avoid the healthy organs as much as possible. Medical image registration is a 
+        to both: affect the tumor and avoid the healthy organs as much as possible. Medical image registration is a 
         method that overlays the current patient's position with the one on the treatment plan CT and matches them in 
         the best way possible to acquire the desired position of the patient. 
         The function of this page is to show the difference between the two registration methods to improve prostate 
@@ -24,13 +24,13 @@ layout = html.Div(className="row", children=[
                        "padding": "10px 30px 10px 30px"}),
 
         html.H6("""The ICP (Iterative Closest Point algorithm) is the registration method based on aligning patient's 
-        bones to their position during plan CT image creation. The second registration method considers 
-        the prostate's position instead of the location of the bones. It aligns the center of the patient's prostate 
-        to the center of the one on the plan CT image. The main difference between these methods is that the first one does 
-        consider the rotation of the organs in the patient's body; however, the second only takes into consideration 
-        the translation. Another distinction is that bones in the human body move a lot less in relation to organs 
-        than the prostate; therefore, there is a difference when one makes both of them the centers of the 
-        alignment.""",
+        bones to their position during plan CT image creation. The second registration method, centering on prostate, 
+        considers the prostate's position instead of the location of the bones. It aligns the center of the patient's 
+        prostate to the center of the one on the plan CT image. The main difference between these methods is that the 
+        first one does consider the rotation of the organs in the patient's body; however, the second only takes into 
+        consideration the translation. Another distinction is that bones in the human body move a lot less in 
+        relation to organs than the prostate; therefore, there is a difference when one makes both of them the 
+        centers of the alignment.""",
                 style={"margin-left": "40px", "margin-right": "40px", "margin-top": "10px", "margin-bottom": "10px",
                        "color": "#081e5e", 'font-weight': 'bold',
                        "background-color": "#c0d9f2", "border-radius": "5px",
@@ -39,7 +39,11 @@ layout = html.Div(className="row", children=[
         html.H6("""The comparison between these two methods is shown among eight patients, each having CT scans from 
         13 treatment appointments. There are several graphs that depict the distinction from different points of 
         view. They are interactive and mutually connected, so one can click on a chart and see the data highlighted 
-        in other charts.""",
+        in other charts. Also, the interconnection of the graphs enables the user to choose and click somewhere in 
+        one graph and then see the selection in the others. For example, in the first heatmap, by clicking on the 
+        first cell in line with number 722, some graphs (graphs showing the distances, differences between the 
+        distances, and the 3D graph with the slices graphs) will show the patient number 722 instead of the number 
+        137 displayed by default.""",
                 style={"margin-left": "40px", "margin-right": "40px", "margin-top": "10px", "margin-bottom": "10px",
                        "color": "#081e5e", 'font-weight': 'bold',
                        "background-color": "#c0d9f2", "border-radius": "5px",
