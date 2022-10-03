@@ -125,7 +125,6 @@ def update_3dgraph(alignment_radioitems, organs, mode, fst_timestamp, snd_timest
         fig.add_trace(go.Cone(x=[x2], y=[y2], z=[z2],
                               u=[cone_tip * (x2 - x1)], v=[cone_tip * (y2 - y1)], w=[cone_tip * (z2 - z1)],
                               colorscale=[[0, "orange"], [1, "orange"]], showlegend=False, showscale=False))
-        print(patient_id)
         fig.update_layout(title_text="Patient {}, timestamp number {} (blue) and number {} (orange)"
                           .format(patient_id, fst_timestamp, snd_timestamp), title_x=0.5,
                           title_y=0.95)
@@ -699,7 +698,6 @@ def decide_average_highlights(data, click_id, icp):
             highlight = 3
         x, y = [int(PATIENTS[data["y"]])], data["y"]
     else:
-        print(patient_id)
         highlight = data["curveNumber"] + 1
         if "differences" in click_id:
             highlight = 2 if data["curveNumber"] == 0 else 3
