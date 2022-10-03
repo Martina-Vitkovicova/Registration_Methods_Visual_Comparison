@@ -24,9 +24,9 @@ layout = html.Div(className="row", children=[
                        "padding": "10px 30px 10px 30px"}),
 
         html.H6("""The ICP (Iterative Closest Point algorithm) is the registration method based on aligning patient's 
-        bones to the position of their bones during plan CT image creation. The second registration method considers 
+        bones to their position during plan CT image creation. The second registration method considers 
         the prostate's position instead of the location of the bones. It aligns the center of the patient's prostate 
-        to the center of the plan prostate. The main difference between these methods is that the first one does 
+        to the center of the one on the plan CT image. The main difference between these methods is that the first one does 
         consider the rotation of the organs in the patient's body; however, the second only takes into consideration 
         the translation. Another distinction is that bones in the human body move a lot less in relation to organs 
         than the prostate; therefore, there is a difference when one makes both of them the centers of the 
@@ -88,18 +88,7 @@ layout = html.Div(className="row", children=[
         one can regulate their visibility.""",
                 style={"margin-left": "40px", "margin-right": "40px", "color": "#081e5e",
                        "background-color": "#c0f2cc", "border-radius": "5px",
-                       "padding": "10px 30px 10px 30px"}),
-
-        html.Div(className="select", children=[
-            html.H6("Select the patient:",
-                    style={'display': 'inline-block', "padding": "20px 101px 0px 45px"}),
-            dcc.Dropdown(options=PATIENTS, value="137", searchable=False,
-                         id="patient-dropdown", style={'display': 'inline-block', "width": "80px", "font-size": "16px",
-                                                       "padding": "20px 80px 0px 85px"})
-        ], style={
-            "display": "flex", "align-items": "center", "justify-content": "center"})
-
-    ]),
+                       "padding": "10px 30px 10px 30px"})]),
 
     html.Div(className="row", children=[
         dcc.Graph(id="organs-icp", style={'display': 'inline-block', "padding": "20px 40px 20px 40px"}),
@@ -149,15 +138,16 @@ layout = html.Div(className="row", children=[
                                value="Plan organs", id="mode-radioitems", inline=True,
                                style={'display': 'inline-block', "padding": "0px 0px 0px 20px", "font-size": "18px"},
                                inputStyle={"margin-left": "20px"}),
-
-                html.H6("Select the first and the second timestamp:",
-                        style={'display': 'inline-block', "padding": "20px 20px 0px 45px"}, id="timestamp"),
-                dcc.Dropdown(options=TIMESTAMPS, value=1, searchable=False, id="fst-timestamp-dropdown",
-                             style={'display': 'inline-block', "width": "50px",
-                                    "height": "30px", "font-size": "16px", "padding": "0px 0px 0px 0px"}),
-                dcc.Dropdown(options=TIMESTAMPS, value=1, searchable=False, id="snd-timestamp-dropdown",
-                             style={'display': 'inline-block', "width": "50px", "height": "30px", "font-size": "16px",
-                                    "padding": "0px 0px 0px 30px"}),
+                html.Div(className="row", style={"display": "flex", "align-items": "center"}, children=[
+                    html.H6("Select the first and the second timestamp:",
+                            style={'display': 'inline-block', "padding": "0px 20px 0px 45px"}, id="timestamp"),
+                    dcc.Dropdown(options=TIMESTAMPS, value=1, searchable=False, id="fst-timestamp-dropdown",
+                                 style={'display': 'inline-block', "width": "50px",
+                                        "height": "30px", "font-size": "16px", "padding": "0px 0px 0px 0px"}),
+                    dcc.Dropdown(options=TIMESTAMPS, value=1, searchable=False, id="snd-timestamp-dropdown",
+                                 style={'display': 'inline-block', "width": "50px", "height": "30px",
+                                        "font-size": "16px",
+                                        "padding": "0px 0px 0px 30px"})]),
 
                 html.H6("Select the method of alignment:",
                         style={'display': 'inline-block', "padding": "0px 50px 0px 45px"}, id="method"),
