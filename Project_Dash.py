@@ -208,8 +208,7 @@ def two_timestamps_mode(method, fst_timestamp, snd_timestamp, objects_fst, objec
     if "ICP" in method:
         meshes, center1_before, center1_after = get_meshes_after_icp(fst_timestamp, objects_fst, patient_id)
         fst_meshes.extend(meshes)
-        meshes, center2_before, center2_after = get_meshes_after_icp(snd_timestamp, objects_snd, patient_id,
-                                                                     "orange")
+        meshes, center2_before, center2_after = get_meshes_after_icp(snd_timestamp, objects_snd, patient_id, "orange")
         snd_meshes.extend(meshes)
 
     else:
