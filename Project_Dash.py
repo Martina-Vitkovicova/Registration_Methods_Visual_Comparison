@@ -30,6 +30,12 @@ patient_id = "137"
 
 
 def create_meshes_from_objs(objects, color):
+    """
+    Transforms imported .obj volume to go.Mesh3d
+    :param objects: imported .objs
+    :param color: mesh color - blue for the first, orange for the second chosen timestamp
+    :return: go.Mesh3d meshes
+    """
     meshes = []
     for elem in objects:
         x, y, z = np.array(elem[0]).T
@@ -40,6 +46,12 @@ def create_meshes_from_objs(objects, color):
 
 
 def order_slice_vertices(vertices, indices):
+    """
+    Corrects the order of the vertices from the slice
+    :param vertices: vertices of the slice
+    :param indices: the order of the vertices
+    :return: vertices in the correct order
+    """
     ordered_vertices = []
     for index in indices:
         ordered_vertices.append(vertices[index])
@@ -59,6 +71,11 @@ def order_slice_vertices(vertices, indices):
     Output(component_id='movements-header', component_property='style'),
     Input(component_id='mode-radioitems', component_property='value'))
 def options_visibility(mode):
+    """
+    Changes the 3D graph options visibility
+    :param mode: either Two timestamps or Plan organs mode
+    :return: display style
+    """
     if mode == "Two timestamps":
         return {'display': 'inline-block', "padding": "0px 50px 0px 45px"}, \
                {'display': 'inline-block', "font-size": "18px", "padding": "0px 100px 0px 12px"}, \
@@ -85,17 +102,24 @@ def options_visibility(mode):
     Input("fst-timestamp-dropdown", "value"),
     Input("snd-timestamp-dropdown", "value"),
     Input("opacity-slider", "value"),
+    Input("movements-radioitems", "value"),
     Input("heatmap-icp", "clickData"),
     Input("heatmap-center", "clickData"),
     Input("average-icp", "clickData"),
-    Input("average-center", "clickData"),
-    Input("movements-radioitems", "value"))
-def update_3dgraph(alignment_radioitems, organs, mode, fst_timestamp, snd_timestamp, opacity_slider,
-                   heatmap_icp, heatmap_center, average_icp, average_center, mov):
+    Input("average-center", "clickData"))
+def create_3dgraph(method, organs, mode, fst_timestamp, snd_timestamp, opacity_slider, mov,
+                   heatmap_icp, heatmap_center, average_icp, average_center):
+    """
+    Creates the 3D figure and visualises it. The last four arguments are just for updating the graph.
+    :param method: ICP or prostate aligning registration method
+    :param organs: organs selected by the user
+    :param mode: showing either Plan organs or organ in the Two timestamps
+    :param mov: showing either all of the movement vectors, only yhe average ones or none
+    :return: the 3d figure
+    """
     global patient_id
     objects_fst = import_selected_organs(organs, fst_timestamp, patient_id)
     objects_snd = import_selected_organs(organs, snd_timestamp, patient_id)
-    fst_meshes, snd_meshes, center1_after, center2_after = [], [], [], []
 
     camera = dict(up=dict(x=0, y=0, z=1), center=dict(x=0, y=0, z=0), eye=dict(x=0.5, y=-2, z=0))
     layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)',
@@ -103,59 +127,157 @@ def update_3dgraph(alignment_radioitems, organs, mode, fst_timestamp, snd_timest
     fig = go.Figure(layout=layout)
     fig.update_layout(scene_camera=camera)
 
-    if "Two timestamps" in mode:
-        if "ICP" in alignment_radioitems:
-            meshes, center1_before, center1_after = get_meshes_after_icp(fst_timestamp, objects_fst, patient_id)
-            fst_meshes.extend(meshes)
-            meshes, center2_before, center2_after = get_meshes_after_icp(snd_timestamp, objects_snd, patient_id,
-                                                                         "orange")
-            snd_meshes.extend(meshes)
+    fst_meshes, snd_meshes = \
+        decide_3d_graph_mode(mode, fig, method, organs, mov, fst_timestamp, snd_timestamp, objects_fst, objects_snd)
 
-        if "Center point" in alignment_radioitems:
-            meshes, center1_before, center1_after = get_meshes_after_centering(fst_timestamp, objects_fst, patient_id,
-                                                                               BLUE)
-            fst_meshes.extend(meshes)
-            meshes, center2_before, center2_after = get_meshes_after_centering(snd_timestamp, objects_snd, patient_id)
-            snd_meshes.extend(meshes)
-        x1, y1, z1 = center1_after[0][0][0]
-        x2, y2, z2 = center2_after[0][0][0]
-        fig.add_trace(go.Scatter3d(x=[x1, x2], y=[y1, y2], z=[z1, z2], mode='lines',
-                                   showlegend=False, line=dict(width=6, color=BLUE)))
-        cone_tip = 0.9 * np.sqrt((x2 - x1) ** 2 + (x2 - x1) ** 2)
-        fig.add_trace(go.Cone(x=[x2], y=[y2], z=[z2],
-                              u=[cone_tip * (x2 - x1)], v=[cone_tip * (y2 - y1)], w=[cone_tip * (z2 - z1)],
-                              colorscale=[[0, "orange"], [1, "orange"]], showlegend=False, showscale=False))
+    for meshes in [fst_meshes, snd_meshes]:
+        for mesh in meshes:
+            mesh.update(cmin=-7, opacity=opacity_slider, lightposition=dict(x=100, y=200, z=0),
+                        lighting=dict(ambient=0.4, diffuse=1, fresnel=0.1, specular=1, roughness=0.5,
+                                      facenormalsepsilon=1e-15, vertexnormalsepsilon=1e-15))
+            fig.add_trace(mesh)
+
+    return fig
+
+
+def import_selected_organs(organs, time_or_plan, patient):
+    objects = []
+    for organ in organs:
+        objects.extend(Project_2.import_obj([FILEPATH + "{}\\{}\\{}{}.obj"
+                                            .format(patient, organ.lower(), organ.lower(), time_or_plan)]))
+    return objects
+
+
+def decide_3d_graph_mode(mode, fig, method, organs, mov, fst_timestamp, snd_timestamp, objects_fst, objects_snd):
+    """
+    Helper function to perform commands according to the chosen mode
+    :param method: ICP or prostate aligning registration method
+    :param organs: organs selected by the user
+    :param mode: showing either Plan organs or organ in the Two timestamps
+    :param mov: showing either all of the movement vectors, only yhe average ones or none
+    :return: created meshes
+    """
+    fst_meshes, snd_meshes = [], []
+
+    if "Two timestamps" in mode:
+        fst_meshes, snd_meshes, center1_after, center2_after = \
+            two_timestamps_mode(method, fst_timestamp, snd_timestamp, objects_fst, objects_snd)
+        draw_movement_arrow(fig, center1_after, center2_after)
         fig.update_layout(title_text="Patient {}, timestamp number {} (blue) and number {} (orange)"
-                          .format(patient_id, fst_timestamp, snd_timestamp), title_x=0.5,
-                          title_y=0.95)
+                          .format(patient_id, fst_timestamp, snd_timestamp), title_x=0.5, title_y=0.95)
 
     else:
         objects = import_selected_organs(organs, "_plan", patient_id)
         fst_meshes = create_meshes_from_objs(objects, BLUE)
-        if "average" in mov:
-            create_average_movement_lines(fig, organs)
-        elif "all" in mov:
-            draw_all_movements(fig, organs)
+        text = plan_organs_mode(fig, mov, organs)
+        fig.update_layout(title_text="Plan organs of patient {} {}".format(patient_id, text), title_x=0.5, title_y=0.95)
 
-        fig.update_layout(title_text="Plan organs of patient {} with vectors of average movements"
-                          .format(patient_id), title_x=0.5, title_y=0.95)
+    return fst_meshes, snd_meshes
 
-    for mesh in fst_meshes:
-        mesh.update(cmin=-7, opacity=opacity_slider, lightposition=dict(x=100, y=200, z=0),
-                    lighting=dict(ambient=0.4, diffuse=1, fresnel=0.1, specular=1, roughness=0.5,
-                                  facenormalsepsilon=1e-15, vertexnormalsepsilon=1e-15))
-        fig.add_trace(mesh)
 
-    for mesh in snd_meshes:
-        mesh.update(cmin=-7, opacity=opacity_slider, lightposition=dict(x=100, y=200, z=0),
-                    lighting=dict(ambient=0.4, diffuse=1, fresnel=0.1, specular=1, roughness=0.5,
-                                  facenormalsepsilon=1e-15, vertexnormalsepsilon=1e-15))
+def plan_organs_mode(fig, mov, organs):
+    """
+    Decides the text for the 3D graph and mode of the movement vectors
+    :param fig: 3D figure
+    :param mov: the mode of the movement vectors selected
+    :param organs: chosen organs
+    :return: the correct text
+    """
+    text = ""
+    if "average" in mov:
+        create_average_movement_lines(fig, organs)
+        text = "with the vectors of average organs movements"
+    elif "all" in mov:
+        draw_all_movements(fig, organs)
+        text = "with all of the organ movements vectors"
 
-        fig.add_trace(mesh)
+    return text
 
-    # fig.add_trace(go.Scatter3d(x=[0, 20], y=[0, 0], z=[50, 50]))
 
-    return fig
+def two_timestamps_mode(method, fst_timestamp, snd_timestamp, objects_fst, objects_snd):
+    """
+    Helper to get the chosen meshes and align them according to the selected method. Compute the center of the meshes.
+    :param method: ICP or prostate centering
+    :param fst_timestamp: number of the first selected timestamp
+    :param snd_timestamp:number of the second selected timestamp
+    :param objects_fst: objects imported in the time of the first timestamp
+    :param objects_snd: objects imported in the time of the second timestamp
+    :return: aligned meshes and center of the moved organs
+    """
+    fst_meshes, snd_meshes = [], []
+    if "ICP" in method:
+        meshes, center1_before, center1_after = get_meshes_after_icp(fst_timestamp, objects_fst, patient_id)
+        fst_meshes.extend(meshes)
+        meshes, center2_before, center2_after = get_meshes_after_icp(snd_timestamp, objects_snd, patient_id,
+                                                                     "orange")
+        snd_meshes.extend(meshes)
+
+    else:
+        meshes, center1_before, center1_after = get_meshes_after_centering(fst_timestamp, objects_fst, patient_id,
+                                                                           BLUE)
+        fst_meshes.extend(meshes)
+        meshes, center2_before, center2_after = get_meshes_after_centering(snd_timestamp, objects_snd, patient_id)
+        snd_meshes.extend(meshes)
+
+    return fst_meshes, snd_meshes, center1_after, center2_after
+
+
+def draw_movement_arrow(fig, center1_after, center2_after):
+    """
+    Create an arrow which show the direction of the moved organs.
+    :param fig: the 3d figure
+    :param center1_after: center of the first organ after the alignment
+    :param center2_after: center of the second organ after the alignment
+    """
+    x1, y1, z1 = center1_after[0][0][0]
+    x2, y2, z2 = center2_after[0][0][0]
+    cone_tip = 0.9 * np.sqrt((x2 - x1) ** 2 + (x2 - x1) ** 2)
+
+    fig.add_trace(go.Scatter3d(x=[x1, x2], y=[y1, y2], z=[z1, z2], mode='lines',
+                               showlegend=False, line=dict(width=6, color=BLUE)))
+    fig.add_trace(go.Cone(x=[x2], y=[y2], z=[z2], u=[cone_tip * (x2 - x1)], v=[cone_tip * (y2 - y1)],
+                          w=[cone_tip * (z2 - z1)], colorscale=[[0, "orange"], [1, "orange"]], showlegend=False,
+                          showscale=False))
+
+
+def get_meshes_after_icp(timestamp, objects, patient, color=BLUE):
+    """
+    Runs functions which perform the icp aligning.
+    :param timestamp: chosen time
+    :return: meshes after aligning and the center of the bones before and after the alignment
+    """
+    plan_bones = Project_2.import_obj([FILEPATH + "{}\\bones\\bones_plan.obj".format(patient)])
+    bones = Project_2.import_obj([FILEPATH + "{}\\bones\\bones{}.obj".format(patient, timestamp)])
+    bones_center_before = Project_2.find_center_point(bones[0][0])
+
+    transform_matrix, vec = Project_2.icp_rot_vec(bones[0][0], plan_bones[0][0])
+    transfr_objects = Project_2.vertices_transformation(transform_matrix, deepcopy(objects))
+    after_icp_meshes = create_meshes_from_objs(transfr_objects, color)
+
+    bones_center_after = Project_2.vertices_transformation(transform_matrix, [[[bones_center_before]]])
+
+    return after_icp_meshes, bones_center_before, bones_center_after
+
+
+def get_meshes_after_centering(timestamp, objects, patient, color="orange"):
+    """
+    Runs functions which perform the aligning on the center of the prostate.
+    :param timestamp: chosen time
+    :return: meshes after aligning and the center of the prostate before and after the alignment
+    """
+    prostate = Project_2.import_obj([FILEPATH + "{}\\prostate\\prostate{}.obj".format(patient, timestamp)])
+    center_before = Project_2.find_center_point(prostate[0][0])
+
+    plan_center = Project_2.find_center_point(Project_2.import_obj(
+        [FILEPATH + "{}\\prostate\\prostate_plan.obj".format(patient)])[0][0])
+    other_center = Project_2.find_center_point(prostate[0][0])
+    center_matrix = Project_2.create_translation_matrix(plan_center, other_center)
+    center_transfr_objects = Project_2.vertices_transformation(center_matrix, deepcopy(objects))
+    after_center_meshes = create_meshes_from_objs(center_transfr_objects, color)
+
+    center_after = Project_2.vertices_transformation(center_matrix, [[[plan_center]]])
+
+    return after_center_meshes, center_before, center_after
 
 
 def draw_all_movements(fig, organs):
@@ -231,87 +353,68 @@ def get_average_vector(organ_name):
     return average_vec
 
 
-# doesnt have to be ifs, can just work with the names and format them
-def import_selected_organs(organs, time_or_plan, patient):
-    objects = []
+@app.callback(
+    Output("x-slice-graph", "figure"),
+    Output("y-slice-graph", "figure"),
+    Output("z-slice-graph", "figure"),
+    Input("x-slice-slider", "value"),
+    Input("y-slice-slider", "value"),
+    Input("z-slice-slider", "value"),
+    Input("organs-checklist", "value"),
+    Input("alignment-radioitems", "value"),
+    Input("mode-radioitems", "value"),
+    Input("fst-timestamp-dropdown", "value"),
+    Input("snd-timestamp-dropdown", "value"))
+def create_graph_slices(x_slider, y_slider, z_slider, organs, method, mode,
+                        fst_timestamp, snd_timestamp):
+    """
+    Creates three figures of slices made in the X, Y, and the Z axis direction. These figures are made according to the
+    3D graph.
+    :param x_slider: how far on the X axis normal we want to cut the slice
+    :param y_slider: how far on the Y axis normal we want to cut the slice
+    :param z_slider: how far on the Z axis normal we want to cut the slice
+    :param organs: organs chosen for the 3D graph
+    :param method: method of alignment in the 3D graph
+    :param mode: mode from the 3D graph
+    :param fst_timestamp: chosen in the 3D graph
+    :param snd_timestamp: chosen in the 3D graph
+    :return: the three slices figures
+    """
+    figures, fst_meshes, snd_meshes = [], [], []
+    names = ["X axis slice", "Y axis slice", "Z axis slice"]
 
-    if "Bones" in organs:
-        objects.extend(Project_2.import_obj([FILEPATH + "{}\\bones\\bones{}.obj".format(patient, time_or_plan)]))
-    if "Prostate" in organs:
-        objects.extend(Project_2.import_obj([FILEPATH + "{}\\prostate\\prostate{}.obj".format(patient, time_or_plan)]))
-    if "Bladder" in organs:
-        objects.extend(Project_2.import_obj([FILEPATH + "{}\\bladder\\bladder{}.obj".format(patient, time_or_plan)]))
-    if "Rectum" in organs:
-        objects.extend(Project_2.import_obj([FILEPATH + "{}\\rectum\\rectum{}.obj".format(patient, time_or_plan)]))
+    for i in range(3):
+        layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)', height=310,
+                           width=320, plot_bgcolor='rgba(50,50,50,1)', margin=dict(l=30, r=20, t=60, b=40),
+                           showlegend=False, title=dict(text=names[i]))
+        fig = go.Figure(layout=layout)
+        fig.update_layout(title_x=0.5)
+        figures.append(fig)
 
-    return objects
+    if "Two timestamps" in mode:
+        fst_meshes = two_slices_mode(method, patient_id, organs, fst_timestamp)
+        snd_meshes = two_slices_mode(method, patient_id, organs, snd_timestamp)
+    else:
+        for organ in organs:
+            fst_meshes.append(
+                trimesh.load_mesh(FILEPATH + "{}\\{}\\{}_plan.obj".format(patient_id, organ.lower(), organ.lower())))
 
+    x_fig = create_slice_final(x_slider, fst_meshes, snd_meshes, figures[0], "x")
+    y_fig = create_slice_final(y_slider, fst_meshes, snd_meshes, figures[1], "y")
+    z_fig = create_slice_final(z_slider, fst_meshes, snd_meshes, figures[2], "z")
 
-def get_meshes_after_icp(timestamp, objects, patient, color=BLUE):
-    plan_bones = Project_2.import_obj([FILEPATH + "{}\\bones\\bones_plan.obj".format(patient)])
-    bones = Project_2.import_obj([FILEPATH + "{}\\bones\\bones{}.obj".format(patient, timestamp)])
-    bones_center_before = Project_2.find_center_point(bones[0][0])
-
-    transform_matrix, vec = Project_2.icp_rot_vec(bones[0][0], plan_bones[0][0])
-    transfr_objects = Project_2.vertices_transformation(transform_matrix, deepcopy(objects))
-    after_icp_meshes = create_meshes_from_objs(transfr_objects, color)
-
-    bones_center_after = Project_2.vertices_transformation(transform_matrix, [[[bones_center_before]]])
-    # print(vec, timestamp)
-
-    return after_icp_meshes, bones_center_before, bones_center_after
-
-
-def get_meshes_after_centering(timestamp, objects, patient, color="orange"):
-    prostate = Project_2.import_obj([FILEPATH + "{}\\prostate\\prostate{}.obj".format(patient, timestamp)])
-    center_before = Project_2.find_center_point(prostate[0][0])
-
-    plan_center = Project_2.find_center_point(Project_2.import_obj(
-        [FILEPATH + "{}\\prostate\\prostate_plan.obj".format(patient)])[0][0])
-    other_center = Project_2.find_center_point(prostate[0][0])
-    center_matrix = Project_2.create_translation_matrix(plan_center, other_center)
-    center_transfr_objects = Project_2.vertices_transformation(center_matrix, deepcopy(objects))
-    after_center_meshes = create_meshes_from_objs(center_transfr_objects, color)
-
-    center_after = Project_2.vertices_transformation(center_matrix, [[[plan_center]]])
-
-    return after_center_meshes, center_before, center_after
-
-
-def timestamp_click_data(icp_click_data, center_click_data):
-    icp_click_data = int(icp_click_data["points"][0]["x"]) if icp_click_data is not None else 1
-    center_click_data = int(center_click_data["points"][0]["x"]) if center_click_data is not None else 1
-
-    input_id = callback_context.triggered[0]["prop_id"].split(".")[0]
-    timestamp = 1
-
-    if input_id == "organs-center":
-        timestamp = center_click_data
-    elif input_id == "organs-icp":
-        timestamp = icp_click_data
-
-    return timestamp
-
-
-def load_organs_average(patient, organs):
-    meshes = []
-
-    if "Prostate" in organs:
-        meshes.append(trimesh.load_mesh(FILEPATH + "{}\\prostate\\prostate_plan.obj".format(patient)))
-
-    if "Bladder" in organs:
-        meshes.append(trimesh.load_mesh(FILEPATH + "{}\\bladder\\bladder_plan.obj".format(patient)))
-
-    if "Rectum" in organs:
-        meshes.append(trimesh.load_mesh(FILEPATH + "{}\\rectum\\rectum_plan.obj".format(patient)))
-
-    if "Bones" in organs:
-        meshes.append(trimesh.load_mesh(FILEPATH + "{}\\bones\\bones_plan.obj".format(patient)))
-
-    return meshes
+    return x_fig, y_fig, z_fig
 
 
 def two_slices_mode(method, patient, organs, timestamp):
+    """
+    Helper function to decide and perform the steps of the chosen method of alignment.
+    :param method: method of the alignment
+    :param patient: chosen patien id
+    :param organs: organs chosen in the 3D graph
+    :param timestamp: chosen time of the timestamp
+    :return: aligned meshes
+    """
     if "ICP" in method:
         plan_bones = Project_2.import_obj([FILEPATH + "{}\\bones\\bones_plan.obj".format(patient)])
         bones = Project_2.import_obj([FILEPATH + "{}\\bones\\bones{}.obj".format(patient, timestamp)])
@@ -329,67 +432,29 @@ def two_slices_mode(method, patient, organs, timestamp):
     return meshes
 
 
-@app.callback(
-    Output("x-slice-graph", "figure"),
-    Output("y-slice-graph", "figure"),
-    Output("z-slice-graph", "figure"),
-    Input("x-slice-slider", "value"),
-    Input("y-slice-slider", "value"),
-    Input("z-slice-slider", "value"),
-    Input("organs-checklist", "value"),
-    Input("alignment-radioitems", "value"),
-    Input("mode-radioitems", "value"),
-    Input("fst-timestamp-dropdown", "value"),
-    Input("snd-timestamp-dropdown", "value"))
-def create_graph_slices(x_slider, y_slider, z_slider, organs, method, mode,
-                        fst_timestamp, snd_timestamp):
-    figures, snd_meshes = [], []
-    names = ["X axis slice", "Y axis slice", "Z axis slice"]
-
-    for i in range(3):
-        layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)', height=310,
-                           width=320, plot_bgcolor='rgba(50,50,50,1)', margin=dict(l=30, r=20, t=60, b=40),
-                           showlegend=False, title=dict(text=names[i]))
-        fig = go.Figure(layout=layout)
-        fig.update_layout(title_x=0.5)
-        figures.append(fig)
-
-    if "Two timestamps" in mode:
-        fst_meshes = two_slices_mode(method, patient_id, organs, fst_timestamp)
-        snd_meshes = two_slices_mode(method, patient_id, organs, snd_timestamp)
-    else:
-        fst_meshes = load_organs_average(patient_id, organs)
-
-    x_fig = create_slice_final(x_slider, fst_meshes, snd_meshes, figures[0], "x")
-    y_fig = create_slice_final(y_slider, fst_meshes, snd_meshes, figures[1], "y")
-    z_fig = create_slice_final(z_slider, fst_meshes, snd_meshes, figures[2], "z")
-
-    return x_fig, y_fig, z_fig
-
-
 def selected_organs_slices(matrix, organs, timestamp, patient):
+    """
+    Applies the transformation to selected organs.
+    :param matrix: acquired either from icp algorithm or centering on the prostate
+    :return: transformed meshes
+    """
     meshes = []
 
-    if "Prostate" in organs:
-        mesh = trimesh.load_mesh(FILEPATH + "{}\\prostate\\prostate{}.obj".format(patient, timestamp))
-        meshes.append(deepcopy(mesh).apply_transform(matrix))
-
-    if "Bladder" in organs:
-        mesh = trimesh.load_mesh(FILEPATH + "{}\\bladder\\bladder{}.obj".format(patient, timestamp))
-        meshes.append(deepcopy(mesh).apply_transform(matrix))
-
-    if "Rectum" in organs:
-        mesh = trimesh.load_mesh(FILEPATH + "{}\\rectum\\rectum{}.obj".format(patient, timestamp))
-        meshes.append(deepcopy(mesh).apply_transform(matrix))
-
-    if "Bones" in organs:
-        mesh = trimesh.load_mesh(FILEPATH + "{}\\bones\\bones{}.obj".format(patient, timestamp))
+    for organ in organs:
+        mesh = trimesh.load_mesh(FILEPATH + "{}\\{}\\{}{}.obj".format(patient, organ.lower(), organ.lower(), timestamp))
         meshes.append(deepcopy(mesh).apply_transform(matrix))
 
     return meshes
 
 
 def create_slice(mesh, slice_slider, params):
+    """
+    Creates the slices from the imported organs
+    :param mesh: mesh of the selected organ
+    :param slice_slider: where on the normal of the axis we want to make the slice
+    :param params: parameters for the computation of the slice
+    :return: created slices
+    """
     min_val, max_val, plane_origin, plane_normal, axis = params
     slope = (max_val - 2.5) - (min_val + 0.5)
 
@@ -412,6 +477,14 @@ def create_slice(mesh, slice_slider, params):
 
 
 def create_slice_helper(meshes, slice_slider, fig, color, axis):
+    """
+    Helper function for the axis creation and the creation of the slices traces for the figures.
+    :param meshes: meshes of the selected organs
+    :param slice_slider: where on the normal of the axis we want to make the slice
+    :param fig: slice graph
+    :param color: either orange or blue according to the slices order
+    :param axis: which axis slice we are creating
+    """
     for mesh in meshes:
         if axis == "x":
             params = mesh.bounds[0][0], mesh.bounds[1][0], [0, mesh.centroid[1], mesh.centroid[2]], [1, 0, 0], "x"
@@ -430,10 +503,15 @@ def create_slice_helper(meshes, slice_slider, fig, color, axis):
             for x, y, _ in slices:
                 fig.add_trace(go.Scatter(x=x, y=y, line=go.scatter.Line(color=color, width=3)))
 
-    return fig
-
 
 def create_slice_final(slice_slider, icp_meshes, centered_meshes, fig, axis):
+    """
+    Calls the function to create the axis slices.
+    :param slice_slider: where on the normal of the axis we want to make the slice
+    :param fig: slice graph
+    :param axis: which axis slice are we making
+    :return slice figure
+    """
     if icp_meshes:
         create_slice_helper(icp_meshes, slice_slider, fig, BLUE, axis)
     if centered_meshes:
@@ -456,6 +534,13 @@ def add_planes(point, normal):
 
 
 def decide_organs_highlights(click_data, click_id, icp):
+    """
+    Computes what to highlight in the organs_icp or organs_center graphs according to clickData from other graphs
+    :param click_data: information about the location of the last click
+    :param click_id: id of the last clicked graph
+    :param icp: true if the organs graph is the icp version, false otherwise
+    :return: colors and sizes of the traces in the organs graphs
+    """
     global patient_id
     colors = [[LIGHT_BLUE] * 13, [GREEN] * 13, [RED] * 13] if icp else [[PURPLE] * 13, [GREEN] * 13, [RED] * 13]
     sizes = [[5] * 13, [5] * 13, [5] * 13]
@@ -506,6 +591,17 @@ def decide_organs_highlights(click_data, click_id, icp):
     Input("heatmap-center", "clickData"))
 def create_distances_after_icp(click_data, center_click_data, differences, average_icp, average_center,
                                heatmap_icp, heatmap_center):
+    """
+    Creates the organs_icp graph which shows how patient's organs moved in the 13 timestamps after icp aligning.
+    :param click_data: clickData from this graph
+    :param center_click_data: clickData from organs_center graph
+    :param differences: clickData from the differences graph
+    :param average_icp: clickData from the average_icp graph
+    :param average_center: clickData from the average_center graph
+    :param heatmap_icp: clickData from the heatmap_icp graph
+    :param heatmap_center: clickData from the heatmap_center graph
+    :return: organs_icp figure
+    """
     global patient_id
     all_click_data = [click_data, center_click_data, differences, average_icp, average_center,
                       heatmap_icp, heatmap_center]
@@ -554,6 +650,19 @@ def create_distances_after_icp(click_data, center_click_data, differences, avera
     Input("heatmap-center", "clickData"))
 def create_distances_after_centering(icp_click_data, click_data, differences, average_icp, average_center,
                                      heatmap_icp, heatmap_center):
+    """
+    Creates the organs_center graph which shows how patient's organs moved in the 13 timestamps after aligning on
+    prostate.
+    :param icp_click_data: organs_icp graph clickData
+    :param click_data: this graph clickData
+    :param differences: clickData from the differences graph
+    :param average_icp: clickData from the average_icp graph
+    :param average_center: clickData from the average_center graph
+    :param heatmap_icp: clickData from the heatmap_icp graph
+    :param heatmap_center: clickData from the heatmap_center graph
+    :return: organs_center figure
+    :return:
+    """
     global patient_id
     colors = [[PURPLE] * 13, [GREEN] * 13, [RED] * 13]
     sizes = [[5] * 13, [5] * 13, [5] * 13]
@@ -591,6 +700,12 @@ def create_distances_after_centering(icp_click_data, click_data, differences, av
 
 
 def decide_differences_highlights(click_data, click_id):
+    """
+    Computes what to highlight in the differences graph according to clickData from other graphs
+    :param click_data: information about the location of the last click
+    :param click_id: id of the last clicked graph
+    :return: colors of the traces in the differences graph
+    """
     colors = [[GREEN] * 13, [RED] * 13]
     data = click_data["points"][0]
 
@@ -632,6 +747,17 @@ def decide_differences_highlights(click_data, click_id):
     Input("heatmap-center", "clickData"))
 def create_distances_between_alignments(differences, organs_icp, organs_center, average_icp, average_center,
                                         heatmap_icp, heatmap_center):
+    """
+    Creates the differences graph which shows the distinctions between the registration methods.
+    :param differences: clickData from this graph
+    :param organs_icp: clickData from the organs_icp graph
+    :param organs_center: clickData from the organs_center graph
+    :param average_icp: clickData from the average_icp graph
+    :param average_center: clickData from the average_center graph
+    :param heatmap_icp: clickData from the heatmap_icp graph
+    :param heatmap_center: clickData from the heatmap_center graph
+    :return: differences graph figure
+    """
     global patient_id
     dist_icp = all_distances_icp[PATIENTS.index(patient_id)]
     dist_center = all_distances_center[PATIENTS.index(patient_id)]
@@ -686,6 +812,14 @@ with open("computations_files/center_distances.txt", "r") as center_dist, open(
 
 
 def decide_average_highlights(data, click_id, icp):
+    """
+    Computes what to highlight in the average_icp and the average_center graphs according to clickData from other
+    graphs.
+    :param data: relevant information about the location of the last click
+    :param click_id: id of the last clicked graph
+    :param icp: whether we highlight in the icp or prostate aligning version of the average graphs
+    :return: colors of the traces in the differences graph
+    """
     global patient_id
     highlight, x, y = 0, 0, 0
 
@@ -718,6 +852,17 @@ def decide_average_highlights(data, click_id, icp):
     Input("heatmap-center", "clickData"))
 def average_distances_icp(differences, organs_icp, organs_center, click_data, center_click_data, heatmap_icp,
                           heatmap_center):
+    """
+    Creates the average_icp graph which shows the average movements of patient's organs after icp aligning.
+    :param differences: clickData from the differences graph
+    :param organs_icp: clickData from the organs_icp graph
+    :param organs_center: clickData from the organs_center graph
+    :param click_data: clickData from this graph
+    :param center_click_data: clickData from the average_center graph
+    :param heatmap_icp: clickData from the heatmap_icp graph
+    :param heatmap_center: clickData from the heatmap_center graph
+    :return: the average_icp figure
+    """
     layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)', margin=dict(t=80, b=70,
                                                                                                            l=90, r=81),
                        plot_bgcolor='rgba(70,70,70,1)', width=680, height=350, showlegend=True,
@@ -775,6 +920,17 @@ def average_distances_icp(differences, organs_icp, organs_center, click_data, ce
     Input("heatmap-center", "clickData"))
 def average_distances_center(differences, organs_icp, organs_center, icp_click_data, click_data, heatmap_icp,
                              heatmap_center):
+    """
+    Creates the average_center graph which shows the average movements of patient's organs after centering on prostate.
+    :param differences: clickData from the differences graph
+    :param organs_icp: clickData from the organs_icp graph
+    :param organs_center: clickData from the organs_center graph
+    :param icp_click_data: clickData from the average_icp graph
+    :param click_data: clickData from this graph
+    :param heatmap_icp: clickData from the heatmap_icp graph
+    :param heatmap_center: clickData from the heatmap_center graph
+    :return: the average_center figure
+    """
     global patient_id
     layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)', margin=dict(t=80, b=70,
                                                                                                            l=90, r=81),
@@ -824,6 +980,12 @@ def average_distances_center(differences, organs_icp, organs_center, icp_click_d
 
 
 def resolve_click_data(click_data, ids):
+    """
+    Decides which graph was clicked last.
+    :param click_data: clickData form every graph
+    :param ids: id of every graph
+    :return: clickData info and the last clicked graph id or None if nothing was clicked in the graphs
+    """
     input_id = callback_context.triggered[0]["prop_id"].split(".")[0]
     for i, click_id in zip(range(len(ids)), ids):
         if input_id == click_id:
@@ -842,6 +1004,17 @@ def resolve_click_data(click_data, ids):
     Input("average-center", "clickData"))
 def create_heatmap_icp(organs_icp, organs_center, differences, click_data, center_click_data, average_icp,
                        average_center):
+    """
+    Creates the heatmap_icp graph which depicts every patient and their every organ movement after icp aligning.
+    :param organs_icp: clickData from the organs_icp graph
+    :param organs_center: clickData from the organs_center graph
+    :param differences: clickData from the differences graph
+    :param click_data: clickData from this graph
+    :param center_click_data: clickData from the heatmap_center graph
+    :param average_icp: clickData from the average_icp graph
+    :param average_center: clickData from the average_center graph
+    :return: heatmap_icp figure
+    """
     global patient_id
 
     layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)',
@@ -871,7 +1044,7 @@ def create_heatmap_icp(organs_icp, organs_center, differences, click_data, cente
     # highlight the selection
     if click_data:
         data = click_data["points"][0]
-        fig = decide_heatmap_highlights(fig, data, click_id)
+        decide_heatmap_highlights(fig, data, click_id)
 
     fig.update_xaxes(title_text="Timestamp", ticktext=TIMESTAMPS, tickmode="array", tickvals=np.arange(1.5, 52, 4),
                      zeroline=False, showgrid=False)
@@ -894,6 +1067,18 @@ def create_heatmap_icp(organs_icp, organs_center, differences, click_data, cente
     Input("organs-center", "clickData"))
 def create_heatmap_centering(click_data, icp_click_data, differences, average_icp, average_center, organs_icp,
                              organs_center):
+    """
+    Creates the heatmap_center graph which depicts every patient and their every organ movement after centering on
+    the prostate registration method.
+    :param click_data: clickData from this graph
+    :param icp_click_data: clickData from the heatmap_icp graph
+    :param differences: clickData from the differences graph
+    :param average_icp: clickData from the average_icp graph
+    :param average_center: clickData from the average_center graph
+    :param organs_icp: clickData from the organs_icp graph
+    :param organs_center: clickData from the organs_center graph
+    :return: heatmap_center figure
+    """
     global patient_id
     layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)',
                        margin=dict(t=80, b=70, l=90, r=81), plot_bgcolor='rgba(70,70,70,1)', width=1420, height=350,
@@ -922,7 +1107,7 @@ def create_heatmap_centering(click_data, icp_click_data, differences, average_ic
     # highlight the selection
     if click_data:
         data = click_data["points"][0]
-        fig = decide_heatmap_highlights(fig, data, click_id)
+        decide_heatmap_highlights(fig, data, click_id)
 
     fig.update_xaxes(title_text="Timestamp", ticktext=TIMESTAMPS, tickmode="array", tickvals=np.arange(1.5, 52, 4),
                      zeroline=False, showgrid=False)
@@ -932,7 +1117,7 @@ def create_heatmap_centering(click_data, icp_click_data, differences, average_ic
                       coloraxis_colorbar=dict(title="Distance", ticksuffix=" mm"))
     fig.update_coloraxes(colorbar_dtick=1)
 
-    # trying to add organs labels
+    # WIP trying to add organs labels
     # row = ["Bn", "Pr", "Bl", "Rc", "Bn", "Pr", "Bl", "Rc", "Bn", "Pr", "Bl", "Rc", "Bn", "Pr", "Bl", "Rc",
     #            "Bn", "Pr", "Bl", "Rc", "Bn", "Pr", "Bl", "Rc", "Bn", "Pr", "Bl", "Rc", "Bn", "Pr", "Bl", "Rc",
     #            "Bn", "Pr", "Bl", "Rc", "Bn", "Pr", "Bl", "Rc", "Bn", "Pr", "Bl", "Rc", "Bn", "Pr", "Bl", "Rc",
@@ -944,6 +1129,12 @@ def create_heatmap_centering(click_data, icp_click_data, differences, average_ic
 
 
 def decide_heatmap_highlights(fig, data, click_id):
+    """
+    Computes what to highlight in the heaatmaps according to clickData from other graphs.
+    :param fig: heatmap figure
+    :param data: clickData from the clicked graph
+    :param click_id: id of the clicked graph
+    """
     if "heatmap" in click_id:
         fig.add_shape(type="rect", x0=data["x"] - 0.43, y0=data["y"] - 0.41, x1=data["x"] + 0.43,
                       y1=data["y"] + 0.41, line_color="white", line_width=4)
@@ -970,10 +1161,13 @@ def decide_heatmap_highlights(fig, data, click_id):
             fig.add_shape(type="rect", x0=x_0 * 4 - 0.43 + x, y0=y - 0.41, x1=x_0 * 4 + 0.43 + x,
                           y1=y + 0.41, line_color="white", line_width=4)
 
-    return fig
-
 
 def create_data_for_heatmap(icp):
+    """
+    Creates hovertexts and formats the data for the heatmaps
+    :param icp: true if our graph is the icp version of the heatmaps, false otherwise
+    :return: formatted data for the heatmap and tha hover text
+    """
     # data is 2d array with distances for the heightmap, custom_data and hover_text are used just for hover labels
     data, custom_data, hover_text = [], [], []
     for i in range(len(PATIENTS)):
