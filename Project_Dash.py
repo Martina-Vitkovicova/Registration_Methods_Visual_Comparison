@@ -141,6 +141,13 @@ def create_3dgraph(method, organs, mode, fst_timestamp, snd_timestamp, opacity_s
 
 
 def import_selected_organs(organs, time_or_plan, patient):
+    """
+    Imports selected organs as .obj files.
+    :param organs: selected organs
+    :param time_or_plan: chosen timestamp or _plan suffix
+    :param patient: id of the patient
+    :return: imported objs
+    """
     objects = []
     for organ in organs:
         objects.extend(Project_2.import_obj([FILEPATH + "{}\\{}\\{}{}.obj"
