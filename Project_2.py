@@ -9,8 +9,8 @@ import time
 from copy import deepcopy
 from scipy.spatial.transform import Rotation as R
 
-FILEPATH = "C:\\Users\\vitko\\Desktop\\ProjetHCI\\Organs\\"
-PATH = "C:\\Users\\vitko\\Desktop\\ProjetHCI\\Organs\\"
+FILEPATH = "C:\\Users\\vitko\\Desktop\\ProjetHCI-BT\\Organs\\"
+PATH = "C:\\Users\\vitko\\Desktop\\ProjetHCI-BT\\Organs\\"
 
 
 def import_obj(files):
@@ -33,10 +33,10 @@ def icp_transformation_matrices(other, key, print_out=False):
     rotation_m = list(R.from_matrix(rotation_m).as_euler('xyz', degrees=True))
 
     if print_out:
-        with open("rotation_icp.txt", "a") as file:
+        with open("old_project_files/rotation_icp.txt", "a") as file:
             file.write("x: {}, y: {}, z: {}\n".format(rotation_m[0], rotation_m[1], rotation_m[2]))
 
-        with open("translation_icp.txt", "a") as file:
+        with open("old_project_files/translation_icp.txt", "a") as file:
             file.write("x: {}, y: {}, z: {}\n".format(translation_m[0], translation_m[1], translation_m[2]))
 
         # print_matrix_info(rotation_m, translation_m)
@@ -205,7 +205,7 @@ def write_center_movements():
     in a file
     """
     key_center = find_center_point(plan[1][0])
-    with open("translation_center.txt", "a") as file:
+    with open("old_project_files/translation_center.txt", "a") as file:
         for entry in os.listdir(PATH + "\\137_prostate"):
             prostate = import_obj([PATH + "\\137_prostate\\{}".format(entry)])
             other_center = find_center_point(prostate[0][0])
@@ -232,7 +232,7 @@ def write_icp_center_movements():
     plan prostate center and translated prostates centers
     """
     plan_prostate_center = find_center_point(plan[1][0])
-    with open("translation_icp_center_prostates", "a") as file:
+    with open("old_project_files/translation_icp_center_prostates", "a") as file:
         for prostate, bone in zip(os.listdir(PATH + "\\137_prostate"), os.listdir(PATH + "\\137_bones")):
             bone = import_obj([PATH + "\\137_bones\\{}".format(bone)])
             transformation_matrix = icp_transformation_matrices(bone[0][0], plan[0][0])
@@ -289,20 +289,20 @@ def compute_distances_after_icp_centroid(patient):
             transf_organ_center = vertices_transformation(transform_matrix, [[[organs[i]]]])
             distances[i].append(numpy.linalg.norm(keys[i] - numpy.array(transf_organ_center)))
 
-    return distances
+    return distances, movement_vectors
 
 
 def compute_distances_after_icp(patient):
     """
     Function that computes distances between aligned organs and their plan organs. Organs were aligned according to the
     icp transformation matrix computed from plan bones and bones in different timestamps
-    :return: 2d list of distances in order: prostate, bladder, rectum
+    :return: 2d list of distances in order: prostate, bladder, rectum, bones
     """
     plan_prostate_center = find_center_point([], trimesh.load_mesh(PATH + "{}\\prostate\\prostate_plan.obj".format(patient)).bounds)
     plan_bladder_center = find_center_point([], trimesh.load_mesh(PATH + "{}\\bladder\\bladder_plan.obj".format(patient)).bounds)
     plan_rectum_center = find_center_point([], trimesh.load_mesh(PATH + "{}\\rectum\\rectum_plan.obj".format(patient)).bounds)
 
-    distances = [[], [], []]
+    distances, movement_vectors = [[], [], []], [[], [], []]
     plan_bone = import_obj([PATH + "{}\\bones\\bones_plan.obj".format(patient)])
     keys = [numpy.array(plan_prostate_center), numpy.array(plan_bladder_center), numpy.array(plan_rectum_center)]
 
@@ -318,65 +318,18 @@ def compute_distances_after_icp(patient):
         for i in range(3):
             transf_organ_center = vertices_transformation(transform_matrix, [[[organs[i]]]])
             distances[i].append(numpy.linalg.norm(keys[i] - numpy.array(transf_organ_center)))
+            movement_vectors[i].append((np.ravel(keys[i] - numpy.array(transf_organ_center))).tolist())
+    # print("")
+    # print_mov(movement_vectors)
 
-    return distances
-
-
-def compute_distances_after_icp_old(patient):
-    """
-    Function that computes distances between aligned organs and their plan organs. Organs were aligned according to the
-    icp transformation matrix computed from plan bones and bones in different timestamps
-    :return: 2d list of distances in order: prostate, bladder, rectum
-    """
-    plan_prostate_center = find_center_point(import_obj([PATH + "{}\\prostate\\prostate_plan.obj".format(patient)])[0][0])
-    plan_bone = import_obj([PATH + "{}\\bones\\bones_plan.obj".format(patient)])
-    first_bladder_center = find_center_point(import_obj([PATH + "{}\\bladder\\bladder1.obj".format(patient)])[0][0])
-    first_rectum_center = find_center_point(import_obj([PATH + "{}\\rectum\\rectum1.obj".format(patient)])[0][0])
-    distances = [[], [], []]
-    keys = [numpy.array(plan_prostate_center), numpy.array(first_bladder_center), numpy.array(first_rectum_center)]
-
-    for i in range(1, 14):
-        bone = import_obj([PATH + "{}\\bones\\bones{}.obj".format(patient, i)])
-        prostate = import_obj([PATH + "{}\\prostate\\prostate{}.obj".format(patient, i)])
-        bladder = import_obj([PATH + "{}\\bladder\\bladder{}.obj".format(patient, i)])
-        rectum = import_obj([PATH + "{}\\rectum\\rectum{}.obj".format(patient, i)])
-        organs = [prostate, bladder, rectum]
-
-        transform_matrix = icp_transformation_matrices(bone[0][0], plan_bone[0][0])
-
-        for i in range(3):
-            transf_organ = vertices_transformation(transform_matrix, [organs[i][0]])
-            transf_organ_center = find_center_point(transf_organ[0][0])
-            distances[i].append(numpy.linalg.norm(keys[i] - numpy.array(transf_organ_center)))
-
-    return distances
+    return distances, movement_vectors
 
 
-# compute_distances_after_icp("137")
-
-
-def compute_distances_after_centering_old(patient):
-    plan_prostate_center = find_center_point(import_obj([PATH + "{}\\prostate\\prostate_plan.obj".format(patient)])[0][0])
-    plan_bladder_center = find_center_point(import_obj([PATH + "{}\\bladder\\bladder_plan.obj".format(patient)])[0][0])
-    plan_rectum_center = find_center_point(import_obj([PATH + "{}\\rectum\\rectum_plan.obj".format(patient)])[0][0])
-    distances = [[], [], []]
-    keys = [numpy.array(plan_prostate_center), numpy.array(plan_bladder_center), numpy.array(plan_rectum_center)]
-
-    for i in range(1, 14):
-        prostate = import_obj([PATH + "{}\\prostate\\prostate{}.obj".format(patient, i)])
-        bladder = import_obj([PATH + "{}\\bladder\\bladder{}.obj".format(patient, i)])
-        rectum = import_obj([PATH + "{}\\rectum\\rectum{}.obj".format(patient, i)])
-        organs = [prostate, bladder, rectum]
-        print(find_center_point(prostate[0][0]), find_center_point(bladder[0][0]), find_center_point(rectum[0][0]))
-
-        transform_matrix = create_translation_matrix(plan_prostate_center, find_center_point(prostate[0][0]))
-
-        for i in range(3):
-            transf_organ = vertices_transformation(transform_matrix, [organs[i][0]])
-            transf_organ_center = find_center_point(transf_organ[0][0])
-            distances[i].append(numpy.linalg.norm(keys[i] - numpy.array(transf_organ_center)))
-
-    return distances
+def print_mov(mov):
+    for organ in mov:
+        for o in organ:
+            print(list(o), end="")
+        print("")
 
 
 def compute_distances_after_centering(patient):
@@ -385,24 +338,25 @@ def compute_distances_after_centering(patient):
     plan_rectum_center = find_center_point([], trimesh.load_mesh(PATH + "{}\\rectum\\rectum_plan.obj".format(patient)).bounds)
     plan_bones_center = find_center_point([], trimesh.load_mesh(PATH + "{}\\bones\\bones_plan.obj".format(patient)).bounds)
 
-    distances = [[], [], [], []]
-    keys = [numpy.array(plan_prostate_center), numpy.array(plan_bladder_center), numpy.array(plan_rectum_center),
-            numpy.array(plan_bones_center)]
+    # movement vectors or distances
+    distances, movement_vectors = [[], [], []], [[], [], []]
+    keys = [numpy.array(plan_bones_center), numpy.array(plan_bladder_center), numpy.array(plan_rectum_center)]
 
     for i in range(1, 14):
         prostate = numpy.array(find_center_point([], trimesh.load_mesh(PATH + "{}\\prostate\\prostate{}.obj".format(patient, i)).bounds))
         bladder = numpy.array(find_center_point([], trimesh.load_mesh(PATH + "{}\\bladder\\bladder{}.obj".format(patient, i)).bounds))
         rectum = numpy.array(find_center_point([], trimesh.load_mesh(PATH + "{}\\rectum\\rectum{}.obj".format(patient, i)).bounds))
         bones = numpy.array(find_center_point([], trimesh.load_mesh(PATH + "{}\\bones\\bones{}.obj".format(patient, i)).bounds))
-        organs = [prostate, bladder, rectum, bones]
 
+        organs = [bones, bladder, rectum]
         transform_matrix = create_translation_matrix(plan_prostate_center, prostate)
 
-        for i in range(4):
+        for i in range(3):
             transf_organ_center = vertices_transformation(transform_matrix, [[[organs[i]]]])
             distances[i].append(numpy.linalg.norm(keys[i] - numpy.array(transf_organ_center)))
+            movement_vectors[i].append((np.ravel(keys[i] - numpy.array(transf_organ_center))).tolist())
 
-    return distances
+    return distances, movement_vectors
 
 
 def timer():
