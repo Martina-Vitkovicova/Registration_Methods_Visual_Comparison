@@ -9,7 +9,7 @@ import time
 from copy import deepcopy
 from scipy.spatial.transform import Rotation as R
 
-FILEPATH = "C:\\Users\\vitko\\Desktop\\ProjetHCI-BT\\Organs\\"
+# FILEPATH = "C:\\Users\\vitko\\Desktop\\ProjetHCI-BT\\Organs\\"
 PATH = "C:\\Users\\vitko\\Desktop\\ProjetHCI-BT\\Organs\\"
 
 
