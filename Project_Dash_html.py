@@ -1,7 +1,7 @@
 from dash import html, dcc
 
 PATIENTS = ["137", "146", "148", "198", "489", "579", "716", "722"]
-TIMESTAMPS = list(range(1, 14))
+TIMESTAMPS = ["plan"] + list(range(1, 14))
 
 layout = html.Div(className="row", children=[
     html.Div(className="row", children=[
@@ -53,6 +53,25 @@ layout = html.Div(className="row", children=[
                            "background-color": "#c0f2f2", "border-radius": "5px",
                            "padding": "10px 0px 0px 0px"}),
 
+        # AVERAGES ------------------------------------------------------------------------------------------
+
+        html.H6("""The next two graphs show the average distance patients' organs have moved away from the plan 
+        organs' positions during the time of the treatment. For every patient, there are three relevant organs in both 
+        graphs. In the centering method chart, bones are included instead of the prostate because the prostate is the 
+        center of the alignment; therefore, it would be zero everytime.""",
+                style={"margin-left": "40px", "margin-right": "40px", "color": "#081e5e",
+                       "background-color": "#c0f2cc", "border-radius": "5px",
+                       "padding": "10px 30px 10px 30px"}),
+
+        html.Div(className="row", style={"textAlign": "center"}, children=[
+            html.H6("Show scale:", style={'display': 'inline-block'}),
+            dcc.RadioItems(options=["uniform", "individual"], value="uniform", inline=True, id="scale-average",
+                           style={'display': 'inline-block', "font-size": "18px"})]),
+
+        dcc.Graph(id="average-icp", style={'display': 'inline-block', "padding": "20px 40px 20px 40px"}),
+
+        dcc.Graph(id="average-center", style={'display': 'inline-block', "padding": "20px 10px 20px 20px"}),
+
         # HEATMAPS ---------------------------------------------------------------------------------------------------
 
         html.H6("""The following two heatmaps represent how much patients' organs moved according to their equivalent 
@@ -64,26 +83,15 @@ layout = html.Div(className="row", children=[
                        "background-color": "#c0f2d9", "border-radius": "5px",
                        "padding": "10px 30px 10px 30px"}),
 
+        html.Div(className="row", style={"textAlign": "center"}, children=[
+            html.H6("Show scale:", style={'display': 'inline-block'}),
+            dcc.RadioItems(options=["uniform", "individual"], value="uniform", inline=True, id="scale-heatmap",
+                           style={'display': 'inline-block', "font-size": "18px"})]),
+
         dcc.Graph(id="heatmap-icp", style={'display': 'inline-block', "padding": "20px 30px 0px 40px"}),
 
         dcc.Graph(id="heatmap-center",
                   style={'display': 'inline-block', "padding": "20px 0px 10px 40px"}),
-
-        # AVERAGE ICP ------------------------------------------------------------------------------------------
-
-        html.H6("""The next two graphs show the average distance patients' organs have moved away from the plan 
-        organs' positions during the time of the treatment. For every patient, there are three relevant organs in both 
-        graphs. In the centering method chart, bones are included instead of the prostate because the prostate is the 
-        center of the alignment; therefore, it would be zero everytime.""",
-                style={"margin-left": "40px", "margin-right": "40px", "color": "#081e5e",
-                       "background-color": "#c0f2cc", "border-radius": "5px",
-                       "padding": "10px 30px 10px 30px"}),
-
-        dcc.Graph(id="average-icp", style={'display': 'inline-block', "padding": "20px 40px 20px 40px"}),
-
-        # AVERAGE CENTER ----------------------------------------------------------------------------------------
-
-        dcc.Graph(id="average-center", style={'display': 'inline-block', "padding": "20px 10px 20px 20px"}),
 
         # ORGANS ICP ---------------------------------------------------------------------------------------------
 
@@ -93,6 +101,11 @@ layout = html.Div(className="row", children=[
                 style={"margin-left": "40px", "margin-right": "40px", "color": "#081e5e",
                        "background-color": "#c0f2cc", "border-radius": "5px",
                        "padding": "10px 30px 10px 30px"})]),
+
+        html.Div(className="row", style={"textAlign": "center"}, children=[
+            html.H6("Show scale:", style={'display': 'inline-block'}),
+            dcc.RadioItems(options=["uniform", "individual"], value="uniform", inline=True, id="scale-organs",
+                           style={'display': 'inline-block', "font-size": "18px"})]),
 
     html.Div(className="row", children=[
         dcc.Graph(id="organs-icp", style={'display': 'inline-block', "padding": "20px 40px 20px 40px"}),
@@ -143,15 +156,12 @@ layout = html.Div(className="row", children=[
                                style={'display': 'inline-block', "padding": "0px 0px 0px 20px", "font-size": "18px"},
                                inputStyle={"margin-left": "20px"}),
                 html.Div(className="row", style={"display": "flex", "align-items": "center"}, children=[
-                    html.H6("Select the first and the second timestamp:",
+                    html.H6("Select the first and the second image:",
                             style={'display': 'inline-block', "padding": "0px 20px 0px 45px"}, id="timestamp"),
                     dcc.Dropdown(options=TIMESTAMPS, value=1, searchable=False, id="fst-timestamp-dropdown",
-                                 style={'display': 'inline-block', "width": "50px",
-                                        "height": "30px", "font-size": "16px", "padding": "0px 0px 0px 0px"}),
+                                 style={'display': 'inline-block', "font-size": "16px", "padding": "0px 0px 0px 0px"}),
                     dcc.Dropdown(options=TIMESTAMPS, value=1, searchable=False, id="snd-timestamp-dropdown",
-                                 style={'display': 'inline-block', "width": "50px", "height": "30px",
-                                        "font-size": "16px",
-                                        "padding": "0px 0px 0px 30px"})]),
+                                 style={'display': 'inline-block', "font-size": "16px", "padding": "0px 0px 0px 30px"})]),
 
                 html.H6("Select the method of alignment:",
                         style={'display': 'inline-block', "padding": "0px 50px 0px 45px"}, id="method"),
