@@ -1,6 +1,5 @@
 from dash import html, dcc
 
-PATIENTS = ["137", "146", "148", "198", "489", "579", "716", "722"]
 TIMESTAMPS = ["plan"] + list(range(1, 14))
 
 layout = html.Div(className="row", children=[
@@ -49,9 +48,11 @@ layout = html.Div(className="row", children=[
                        "background-color": "#c0d9f2", "border-radius": "5px",
                        "padding": "10px 30px 10px 30px"}),
 
-        html.H6("", style={"margin": "15px 40px 15px 40px", "color": "#081e5e",
-                           "background-color": "#c0f2f2", "border-radius": "5px",
-                           "padding": "10px 0px 0px 0px"}),
+        html.H6("Patients overview section", style={"margin": "20px 40px 20px 40px", "color": "#171717", "font-size":
+                                                    "20pt",
+                                                    "font-family": "Bahnschrift", 'font-weight': 'bold',
+                                                    "background-color": "#C7C7C7", "border-radius": "5px",
+                                                    "padding": "10px 0px 10px 0px", "text-align": "center"}),
 
         # AVERAGES ------------------------------------------------------------------------------------------
 
@@ -93,19 +94,25 @@ layout = html.Div(className="row", children=[
         dcc.Graph(id="heatmap-center",
                   style={'display': 'inline-block', "padding": "20px 0px 10px 40px"}),
 
+        html.H6("Individual patient section",
+                style={"margin": "20px 40px 20px 40px", "color": "#171717",
+                       "font-family": "Bahnschrift", 'font-weight': 'bold',
+                       "background-color": "#C7C7C7", "border-radius": "5px",
+                       "padding": "10px 0px 10px 0px", "text-align": "center", "font-size": "20pt"}),
+
         # ORGANS ICP ---------------------------------------------------------------------------------------------
 
         html.H6("""On the contrary to the previous graphs, the consecutive charts only depict organs and bones of one 
         patient during the treatment period - 13 appointments. By clicking on the traces in the legend, 
         one can regulate their visibility.""",
-                style={"margin-left": "40px", "margin-right": "40px", "color": "#081e5e",
+                style={"margin-left": "40px", "margin-right": "40px", "margin-top": "30px", "color": "#081e5e",
                        "background-color": "#c0f2cc", "border-radius": "5px",
                        "padding": "10px 30px 10px 30px"})]),
 
-        html.Div(className="row", style={"textAlign": "center"}, children=[
-            html.H6("Show scale:", style={'display': 'inline-block'}),
-            dcc.RadioItems(options=["uniform", "individual"], value="uniform", inline=True, id="scale-organs",
-                           style={'display': 'inline-block', "font-size": "18px"})]),
+    html.Div(className="row", style={"textAlign": "center"}, children=[
+        html.H6("Show scale:", style={'display': 'inline-block'}),
+        dcc.RadioItems(options=["uniform", "individual"], value="uniform", inline=True, id="scale-organs",
+                       style={'display': 'inline-block', "font-size": "18px"})]),
 
     html.Div(className="row", children=[
         dcc.Graph(id="organs-icp", style={'display': 'inline-block', "padding": "20px 40px 20px 40px"}),
@@ -161,7 +168,8 @@ layout = html.Div(className="row", children=[
                     dcc.Dropdown(options=TIMESTAMPS, value=1, searchable=False, id="fst-timestamp-dropdown",
                                  style={'display': 'inline-block', "font-size": "16px", "padding": "0px 0px 0px 0px"}),
                     dcc.Dropdown(options=TIMESTAMPS, value=1, searchable=False, id="snd-timestamp-dropdown",
-                                 style={'display': 'inline-block', "font-size": "16px", "padding": "0px 0px 0px 30px"})]),
+                                 style={'display': 'inline-block', "font-size": "16px",
+                                        "padding": "0px 0px 0px 30px"})]),
 
                 html.H6("Select the method of alignment:",
                         style={'display': 'inline-block', "padding": "0px 50px 0px 45px"}, id="method"),

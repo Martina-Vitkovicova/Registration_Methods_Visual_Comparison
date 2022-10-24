@@ -6,25 +6,12 @@ import plotly.graph_objects as go
 import Project_2
 import Project_Dash_html
 import json
+from constants import FILEPATH, PATIENTS, TIMESTAMPS, LIGHT_BLUE, BLUE, RED, GREEN, GREY, PURPLE, CONE_TIP
 
-FILEPATH = "C:\\Users\\vitko\\Desktop\\ProjetHCI-BT\\BT_implementation\\Organs\\"
-PATIENTS = ["137", "146", "148", "198", "489", "579", "716", "722"]
-TIMESTAMPS = list(range(1, 14))
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 app = Dash(__name__, external_stylesheets=external_stylesheets)
 app.layout = Project_Dash_html.layout
-
-LIGHT_BLUE = "#636EFA"
-GREEN = "#EF553B"
-RED = "#00CC96"
-BLUE = "#1F77B4"
-PURPLE = "#AB63FA"
-ORANGE = "#FFA15A"
-GREY = "#667299"
-
-CONE_TIP = 0.1
-CONE_START = 0.9
 
 patient_id = "137"
 
@@ -80,9 +67,9 @@ def options_visibility(mode):
         return {'display': 'inline-block', "padding": "0px 50px 0px 45px"}, \
                {'display': 'inline-block', "font-size": "18px", "padding": "0px 100px 0px 12px"}, \
                {'display': 'inline-block', "padding": "0px 20px 0px 45px"}, \
-               {'display': 'inline-block', "width": "50px",
+               {'display': 'inline-block', "width": "60px",
                 "height": "30px", "font-size": "16px", "padding": "0px 0px 0px 0px"}, \
-               {'display': 'inline-block', "width": "50px",
+               {'display': 'inline-block', "width": "60px",
                 "height": "30px", "font-size": "16px", "padding": "0px 0px 0px 30px"}, \
                {'display': 'inline-block', "padding": "10px 0px 10px 0px"}, \
                {'display': 'inline-block', "padding": "10px 0px 0px 0px"}, {'display': 'none'}, {'display': 'none'}
@@ -129,7 +116,7 @@ def create_3dgraph(method, organs, mode, fst_timestamp, snd_timestamp, opacity_s
     layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)',
                        plot_bgcolor='rgba(50,50,50,1)', margin=dict(l=40, r=40, t=60, b=40), showlegend=True)
     fig = go.Figure(layout=layout)
-    fig.update_layout(scene_camera=camera)
+    fig.update_layout(scene_camera=camera, scene=dict(xaxis_title='x [mm]', yaxis_title='y [mm]', zaxis_title='z [mm]'))
 
     fst_meshes, snd_meshes = \
         decide_3d_graph_mode(mode, fig, method, organs, mov, fst_timestamp, snd_timestamp, objects_fst, objects_snd)
@@ -650,7 +637,7 @@ def create_distances_after_icp(click_data, center_click_data, differences, avera
                                marker=dict(color=colors[2], size=sizes[2], line_color=colors[2], opacity=1)))
 
     fig.update_xaxes(title_text="Timestamp", tick0=0, dtick=1)
-    fig.update_yaxes(title_text="Distance")
+    fig.update_yaxes(title_text="Distance [mm]")
 
     if "uniform" in scale:
         fig.update_yaxes(range=[0, 90])
@@ -714,7 +701,7 @@ def create_distances_after_centering(icp_click_data, click_data, differences, av
     fig.add_trace(go.Scattergl(x=np.array(range(1, 14)), y=rectum, mode="lines+markers", name="Rectum",
                                marker=dict(color=colors[2], size=sizes[2], line_color=colors[2], opacity=1)))
     fig.update_xaxes(title_text="Timestamp", tick0=0, dtick=1)
-    fig.update_yaxes(title_text="Distance")
+    fig.update_yaxes(title_text="Distance [mm]")
 
     if "uniform" in scale:
         fig.update_yaxes(range=[0, 90])
@@ -810,7 +797,7 @@ def create_distances_between_alignments(differences, organs_icp, organs_center, 
     fig.add_trace(go.Bar(x=np.array(range(1, 14)), y=rectum, name="Rectum", marker=dict(color=colors[1])))
 
     fig.update_xaxes(title_text="Timestamp", tick0=0, dtick=1)
-    fig.update_yaxes(title_text="Distance center | Distance ICP  ", tick0=0, dtick=2)
+    fig.update_yaxes(title_text="  Distance centre | ICP [mm]")
     fig.update_layout(title_x=0.5, font=dict(size=14), title_y=0.90)
 
     return fig
@@ -936,7 +923,7 @@ def average_distances_icp(differences, organs_icp, organs_center, click_data, ce
     if "uniform" in scale:
         fig.update_yaxes(range=[-5, 85])
 
-    fig.update_yaxes(title_text="Average distance")
+    fig.update_yaxes(title_text="Average distance [mm]")
     fig.update_layout(title_x=0.5, font=dict(size=14), title_y=0.90)
 
     return fig
@@ -1007,7 +994,7 @@ def average_distances_center(differences, organs_icp, organs_center, icp_click_d
 
     fig.update_traces(marker=dict(size=12))
     fig.update_xaxes(title_text="Patient")
-    fig.update_yaxes(title_text="Average distance")
+    fig.update_yaxes(title_text="Average distance [mm]")
 
     if "uniform" in scale:
         fig.update_yaxes(range=[-5, 85])
@@ -1066,14 +1053,16 @@ def create_heatmap_icp(organs_icp, organs_center, differences, click_data, cente
 
     if "uniform" in scale:
         fig = go.Figure(data=go.Heatmap(z=data, zmin=0, zmax=85, text=hover_text, customdata=custom_data,
+                                        colorbar=dict(title="Distance<br>[mm]"),
                                         hovertemplate="<b>%{text}</b><br>Patient: %{y}<br>Timestamp: %{customdata}<br>"
                                                       "Distance: %{z:.2f} mm<extra></extra>", colorscale="Portland"),
                         layout=layout)
     else:
         fig = go.Figure(data=go.Heatmap(z=data, text=hover_text, customdata=custom_data,
-                                        hovertemplate="<b>%{text}</b><br>Patient: %{y}<br>Timestamp: %{customdata}<br>"
-                                                      "Distance: %{z:.2f} mm<extra></extra>", colorscale="Portland"),
-                        layout=layout)
+                                        colorbar=dict(title="Distance<br>[mm]"),
+                                        hovertemplate="<b>%{text}</b><br>Patient: %{y}<br>Timestamp: "
+                                                      "%{customdata}<br>" "Distance: %{z:.2f} mm<extra></extra>",
+                                        colorscale="Portland"), layout=layout)
 
     # create borders around cells
     for i in range(1, 13):
@@ -1095,10 +1084,10 @@ def create_heatmap_icp(organs_icp, organs_center, differences, click_data, cente
 
     fig.update_xaxes(title_text="Timestamp", ticktext=TIMESTAMPS, tickmode="array", tickvals=np.arange(1.5, 52, 4),
                      zeroline=False, showgrid=False)
-    fig.update_yaxes(title_text="Patient", ticktext=PATIENTS, tickmode="array", tickvals=np.arange(0, 8, 1),
+    fig.update_yaxes(title_text="Patient", ticktext=PATIENTS + ["info"], tickmode="array", tickvals=np.arange(0, 8, 1),
                      zeroline=False, showgrid=False)
     fig.update_layout(title_x=0.5, font=dict(size=14), title_y=0.90)
-    fig.update_coloraxes(colorbar_dtick=1)
+    fig.update_layout(coloraxis_colorbar=dict(title="Your Title"))
 
     return fig
 
@@ -1128,16 +1117,23 @@ def create_heatmap_centering(click_data, icp_click_data, differences, average_ic
     :return: heatmap_center figure
     """
     global patient_id
+
+    annotations = []
+    for i, text in enumerate(["Bn", "Pr", "Bl", "Rc"] * 13):
+        annotations.append({"x": i, "y": 8, "text": text, "font": {"size": 13, "color": "white"}, "showarrow": False})
+
     layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)',
                        margin=dict(t=80, b=70, l=90, r=81), plot_bgcolor='rgba(70,70,70,1)', width=1420, height=350,
                        showlegend=True, title=dict(text="Difference of patients' organs positions after centering on "
                                                         "prostate",
-                                                   font=dict(size=18, color='lightgrey')))
+                                                   font=dict(size=18, color='lightgrey')),
+                       annotations=annotations)
 
     data, custom_data, hover_text = create_data_for_heatmap(False)
 
     if "uniform" in scale:
         fig = go.Figure(data=go.Heatmap(z=data, zmin=0, zmax=85, text=hover_text, customdata=custom_data,
+                                        colorbar=dict(title="Distance<br>[mm]"),
                                         hovertemplate="<b>%{text}</b><br>Patient: %{y}<br>Timestamp: %{customdata}<br>"
                                                       "Distance: %{z:.2f} mm<extra></extra>",
                                         colorscale="Portland"), layout=layout)  # [[0, BLUE], [0.5, RED], [1, GREEN]]
@@ -1145,14 +1141,18 @@ def create_heatmap_centering(click_data, icp_click_data, differences, average_ic
         fig = go.Figure(data=go.Heatmap(z=data, text=hover_text, customdata=custom_data,
                                         hovertemplate="<b>%{text}</b><br>Patient: %{y}<br>Timestamp: %{customdata}<br>"
                                                       "Distance: %{z:.2f} mm<extra></extra>",
-                                        colorscale="Portland"), layout=layout)
+                                        colorscale="Portland", colorbar=dict(title="Distance<br>[mm]")), layout=layout)
 
     # dividers between cells
     for i in range(1, 13):
-        fig.add_vline(x=4 * i - 0.5, line_width=4, line_color=GREY)
+        fig.add_shape(type="rect", x0=4 * i - 0.5, y0=-0.5, x1=4 * i - 0.5,
+                      y1=7.5, line_width=4, line_color=GREY)
 
-    for i in range(1, 8):
-        fig.add_hline(y=i - 0.5, line_width=4, line_color=GREY)
+    for i in range(1, 9):
+        if i == 8:
+            fig.add_hline(y=i - 0.5, line_width=3, line_color="#c7c7c7")
+        else:
+            fig.add_hline(y=i - 0.5, line_width=4, line_color=GREY)
 
     all_click_data = [organs_icp, organs_center, differences, average_icp, average_center,
                       icp_click_data, click_data]
@@ -1167,19 +1167,9 @@ def create_heatmap_centering(click_data, icp_click_data, differences, average_ic
 
     fig.update_xaxes(title_text="Timestamp", ticktext=TIMESTAMPS, tickmode="array", tickvals=np.arange(1.5, 52, 4),
                      zeroline=False, showgrid=False)
-    fig.update_yaxes(title_text="Patient", ticktext=PATIENTS, tickmode="array", tickvals=np.arange(0, 9, 1),
+    fig.update_yaxes(title_text="Patient", ticktext=PATIENTS, tickmode="array", tickvals=np.arange(0, 8, 1),
                      zeroline=False, showgrid=False)
-    fig.update_layout(title_x=0.5, font=dict(size=14), title_y=0.90,
-                      coloraxis_colorbar=dict(title="Distance", ticksuffix=" mm"))
-    fig.update_coloraxes(colorbar_dtick=1)
-
-    # WIP trying to add organs labels
-    # row = ["Bn", "Pr", "Bl", "Rc", "Bn", "Pr", "Bl", "Rc", "Bn", "Pr", "Bl", "Rc", "Bn", "Pr", "Bl", "Rc",
-    #            "Bn", "Pr", "Bl", "Rc", "Bn", "Pr", "Bl", "Rc", "Bn", "Pr", "Bl", "Rc", "Bn", "Pr", "Bl", "Rc",
-    #            "Bn", "Pr", "Bl", "Rc", "Bn", "Pr", "Bl", "Rc", "Bn", "Pr", "Bl", "Rc", "Bn", "Pr", "Bl", "Rc",
-    #            "Bn", "Pr", "Bl", "Rc"]
-    # z_text = [row, "", "", "", "", "", "", ""]
-    # fig.update_traces(text=z_text, texttemplate="%{text}")
+    fig.update_layout(title_x=0.5, font=dict(size=14), title_y=0.90)
 
     return fig
 
