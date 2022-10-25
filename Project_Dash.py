@@ -382,7 +382,7 @@ def create_graph_slices(x_slider, y_slider, z_slider, organs, method, mode,
     :return: the three slices figures
     """
     figures, fst_meshes, snd_meshes = [], [], []
-    names = ["X axis slice", "Y axis slice", "Z axis slice"]
+    names = ["X axis slice [mm]", "Y axis slice [mm]", "Z axis slice [mm]"]
 
     for i in range(3):
         layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)', height=310,
@@ -549,7 +549,7 @@ def decide_organs_highlights(click_data, click_id, icp):
     sizes = [[5] * 13, [5] * 13, [5] * 13]
     data = click_data["points"][0]
 
-    if "heatmap" in click_id:
+    if "heatmap" in click_id and data["curveNumber"] == 0:
         patient_id = PATIENTS[data["y"]]
         x = int(click_data["points"][0]["x"]) // 4
         if data["text"] == "Bladder":
@@ -721,7 +721,7 @@ def decide_differences_highlights(click_data, click_id):
     colors = [[GREEN] * 13, [RED] * 13]
     data = click_data["points"][0]
 
-    if "heatmap" in click_id:
+    if "heatmap" in click_id and data["curveNumber"] == 0:
         x = int(click_data["points"][0]["x"]) // 4
         if data["text"] == "Bladder":
             colors[0][x] = "white"
@@ -838,7 +838,7 @@ def decide_average_highlights(data, click_id, icp):
     global patient_id
     highlight, x, y = 0, 0, 0
 
-    if "heatmap" in click_id:
+    if "heatmap" in click_id and data["curveNumber"] == 0:
         if (icp and data["text"] == "Prostate") or (not icp and data["text"] == "Bones"):
             highlight = 1
         elif data["text"] == "Bladder":
@@ -1044,7 +1044,7 @@ def create_heatmap_icp(organs_icp, organs_center, differences, click_data, cente
     global patient_id
 
     layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)',
-                       margin=dict(t=80, b=70, l=90, r=81), plot_bgcolor='rgba(70,70,70,1)', width=1420, height=350,
+                       margin=dict(t=80, b=70, l=90, r=81), plot_bgcolor='rgba(50,50,50,1)', width=1420, height=350,
                        showlegend=True, title=dict(text="Difference of patients' organs positions after ICP "
                                                         "aligning to the bones",
                                                    font=dict(size=18, color='lightgrey')))
@@ -1066,7 +1066,7 @@ def create_heatmap_icp(organs_icp, organs_center, differences, click_data, cente
 
     # create borders around cells
     for i in range(1, 13):
-        fig.add_vline(x=4 * i - 0.5, line_width=4, line_color=GREY)
+        fig.add_shape(type="rect", x0=4 * i - 0.5, y0=-0.5, x1=4 * i - 0.5, y1=8.4, line_width=4, line_color=GREY)
 
     for i in range(1, 8):
         fig.add_hline(y=i - 0.5, line_width=4, line_color=GREY)
@@ -1082,12 +1082,14 @@ def create_heatmap_icp(organs_icp, organs_center, differences, click_data, cente
         data = click_data["points"][0]
         decide_heatmap_highlights(fig, data, click_id)
 
+    create_heatmap_annotations(fig)
+
     fig.update_xaxes(title_text="Timestamp", ticktext=TIMESTAMPS, tickmode="array", tickvals=np.arange(1.5, 52, 4),
-                     zeroline=False, showgrid=False)
+                     zeroline=False, showgrid=False, range=[-0.5, 51.5])
     fig.update_yaxes(title_text="Patient", ticktext=PATIENTS + ["info"], tickmode="array", tickvals=np.arange(0, 8, 1),
                      zeroline=False, showgrid=False)
-    fig.update_layout(title_x=0.5, font=dict(size=14), title_y=0.90)
-    fig.update_layout(coloraxis_colorbar=dict(title="Your Title"))
+    fig.update_layout(title_x=0.5, font=dict(size=14), title_y=0.90, legend={"x": 0.8, "y": 1.12, "orientation": "h",
+                                                                             "xanchor": "left"})
 
     return fig
 
@@ -1118,16 +1120,11 @@ def create_heatmap_centering(click_data, icp_click_data, differences, average_ic
     """
     global patient_id
 
-    annotations = []
-    for i, text in enumerate(["Bn", "Pr", "Bl", "Rc"] * 13):
-        annotations.append({"x": i, "y": 8, "text": text, "font": {"size": 13, "color": "white"}, "showarrow": False})
-
     layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)',
-                       margin=dict(t=80, b=70, l=90, r=81), plot_bgcolor='rgba(70,70,70,1)', width=1420, height=350,
+                       margin=dict(t=80, b=70, l=90, r=81), plot_bgcolor='rgba(50,50,50,1)', width=1420, height=350,
                        showlegend=True, title=dict(text="Difference of patients' organs positions after centering on "
                                                         "prostate",
-                                                   font=dict(size=18, color='lightgrey')),
-                       annotations=annotations)
+                                                   font=dict(size=18, color='lightgrey')))
 
     data, custom_data, hover_text = create_data_for_heatmap(False)
 
@@ -1145,14 +1142,10 @@ def create_heatmap_centering(click_data, icp_click_data, differences, average_ic
 
     # dividers between cells
     for i in range(1, 13):
-        fig.add_shape(type="rect", x0=4 * i - 0.5, y0=-0.5, x1=4 * i - 0.5,
-                      y1=7.5, line_width=4, line_color=GREY)
+        fig.add_shape(type="rect", x0=4 * i - 0.5, y0=-0.5, x1=4 * i - 0.5, y1=8.4, line_width=4, line_color=GREY)
 
-    for i in range(1, 9):
-        if i == 8:
-            fig.add_hline(y=i - 0.5, line_width=3, line_color="#c7c7c7")
-        else:
-            fig.add_hline(y=i - 0.5, line_width=4, line_color=GREY)
+    for i in range(1, 8):
+        fig.add_hline(y=i - 0.5, line_width=4, line_color=GREY)
 
     all_click_data = [organs_icp, organs_center, differences, average_icp, average_center,
                       icp_click_data, click_data]
@@ -1165,13 +1158,27 @@ def create_heatmap_centering(click_data, icp_click_data, differences, average_ic
         data = click_data["points"][0]
         decide_heatmap_highlights(fig, data, click_id)
 
+    create_heatmap_annotations(fig)
+
     fig.update_xaxes(title_text="Timestamp", ticktext=TIMESTAMPS, tickmode="array", tickvals=np.arange(1.5, 52, 4),
-                     zeroline=False, showgrid=False)
+                     zeroline=False, showgrid=False, range=[-0.5, 51.5])
     fig.update_yaxes(title_text="Patient", ticktext=PATIENTS, tickmode="array", tickvals=np.arange(0, 8, 1),
                      zeroline=False, showgrid=False)
-    fig.update_layout(title_x=0.5, font=dict(size=14), title_y=0.90)
+    fig.update_layout(title_x=0.5, font=dict(size=14), title_y=0.90, legend={"x": 0.8, "y": 1.12, "orientation": "h",
+                                                                             "xanchor": "left"})
 
     return fig
+
+
+def create_heatmap_annotations(fig):
+    fig.add_trace(go.Scatter(x=list(range(0, 13 * 4, 4)), y=[8] * 13, mode="markers", name="Bones",
+                             marker=dict(symbol="circle", color=PURPLE, size=10)))
+    fig.add_trace(go.Scatter(x=list(range(1, 13 * 4, 4)), y=[8] * 13, mode="markers", name="Prostate",
+                             marker=dict(symbol="circle", color=BLUE, size=10)))
+    fig.add_trace(go.Scatter(x=list(range(2, 13 * 4, 4)), y=[8] * 13, mode="markers", name="Bladder",
+                             marker=dict(symbol="square", color=RED, size=10)))
+    fig.add_trace(go.Scatter(x=list(range(3, 13 * 4, 4)), y=[8] * 13, mode="markers", name="Rectum",
+                             marker=dict(symbol="diamond", color=GREEN, size=10)))
 
 
 def decide_heatmap_highlights(fig, data, click_id):
@@ -1181,6 +1188,10 @@ def decide_heatmap_highlights(fig, data, click_id):
     :param data: clickData from the clicked graph
     :param click_id: id of the clicked graph
     """
+    print(data)
+    # clicking on the help "annotation traces" in heatmaps
+    if "heatmap" in click_id and data["curveNumber"] != 0:
+        return
     if "heatmap" in click_id:
         fig.add_shape(type="rect", x0=data["x"] - 0.43, y0=data["y"] - 0.41, x1=data["x"] + 0.43,
                       y1=data["y"] + 0.41, line_color="white", line_width=4)
