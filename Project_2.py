@@ -8,6 +8,8 @@ import pywavefront
 import time
 from copy import deepcopy
 from scipy.spatial.transform import Rotation as R
+
+import constants
 from constants import FILEPATH
 
 
@@ -34,7 +36,7 @@ def icp_transformation_matrices(other, key, print_out=False):
         with open("old_project_files/rotation_icp.txt", "a") as file:
             file.write("x: {}, y: {}, z: {}\n".format(rotation_m[0], rotation_m[1], rotation_m[2]))
 
-        with open("old_project_files/translation_icp.txt", "a") as file:
+        with open("old_project_files/translation_icp.txt", "w") as file:
             file.write("x: {}, y: {}, z: {}\n".format(translation_m[0], translation_m[1], translation_m[2]))
 
         # print_matrix_info(rotation_m, translation_m)

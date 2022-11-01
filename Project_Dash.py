@@ -8,12 +8,12 @@ import Project_Dash_html
 import json
 from constants import FILEPATH, PATIENTS, TIMESTAMPS, LIGHT_BLUE, BLUE, RED, GREEN, GREY, PURPLE, CONE_TIP
 
-
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 app = Dash(__name__, external_stylesheets=external_stylesheets)
 app.layout = Project_Dash_html.layout
 
 patient_id = "137"
+camera_g = dict(up=dict(x=0, y=0, z=1), center=dict(x=0, y=0, z=0), eye=dict(x=0.5, y=-2, z=0))
 
 
 def create_meshes_from_objs(objects, color):
@@ -76,9 +76,74 @@ def options_visibility(mode):
 
     else:
         return {'display': 'none'}, {'display': 'none'}, {'display': 'none'}, {'display': 'none'}, \
-               {'display': 'none'}, {}, {}, \
+               {'display': 'none'}, {"padding": "10px 0px 10px 0px"}, {"padding": "10px 0px 0px 0px"}, \
                {'display': 'inline-block', "font-size": "18px", "padding": "0px 100px 0px 12px"}, \
                {'display': 'inline-block', "padding": "0px 0px 0px 45px"}
+
+
+@app.callback(
+    Output("rotations-axes", "figure"),
+    Input("heatmap-icp", "clickData"),
+    Input("heatmap-center", "clickData"),
+    Input("average-icp", "clickData"),
+    Input("average-center", "clickData"))
+def create_3d_angle(heatmap_icp, heatmap_center, average_icp, average_center):
+    layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(20,50,50,1)', showlegend=False,
+                       plot_bgcolor='rgba(50,50,50,1)', margin=dict(l=10, r=10, t=10, b=10), width=150, height=150)
+    fig = go.Figure(layout=layout)
+    camera = dict(up=dict(x=0, y=0, z=1), center=dict(x=0, y=0, z=0), eye=dict(x=1.1, y=0.4, z=0.4))
+
+    annot = []
+    create_rotation_axes(fig, annot)
+
+    steps = 50
+    cone_tip = 5
+    size = 12
+    t = np.linspace(0, 10, steps)
+    x, y, z = 20, np.cos(t) * size, np.sin(t) * size
+    fig.add_trace(go.Scatter3d(mode="lines", x=[x] * 25, y=y, z=z, line=dict(width=4, color=BLUE)))
+    fig.add_trace(go.Cone(x=[x], y=[y[0]], z=[z[0]], u=[0], v=[cone_tip * (y[0] - y[1])], w=[cone_tip * (z[0] - z[1])],
+                          showlegend=False, showscale=False, colorscale=[[0, BLUE], [1, BLUE]]))
+    annot.append(dict(showarrow=False, text="0.8°", x=25, y=-25, z=0, font=dict(color=BLUE)))
+
+    x, y, z = np.cos(t) * size, 20, np.sin(t) * size
+    fig.add_trace(go.Scatter3d(mode="lines", x=x, y=[y] * 25, z=z, line=dict(width=4, color=RED), hoverinfo='none'))
+    fig.add_trace(go.Cone(x=[x[0]], y=[y], z=[z[0]], u=[cone_tip * (x[0] - x[1])], v=[0], w=[cone_tip * (z[0] - z[1])],
+                          showlegend=False, showscale=False, colorscale=[[0, RED], [1, RED]]))
+    annot.append(dict(showarrow=False, text="1.5°", x=5, y=35, z=15, font=dict(color=RED)))
+
+    x, y, z = np.cos(t) * size, np.sin(t) * size, 20
+    fig.add_trace(go.Scatter3d(mode="lines", x=x, y=y, z=[z] * 25, line=dict(width=4, color=GREEN), hoverinfo='none'))
+    fig.add_trace(go.Cone(x=[x[0]], y=[y[0]], z=[z], u=[cone_tip * (x[0] - x[1])], v=[cone_tip * (y[0] - y[1])],
+                          w=[0], showlegend=False, showscale=False, colorscale=[[0, GREEN], [1, GREEN]]))
+    annot.append(dict(showarrow=False, text="3.2°", x=10, y=-10, z=z+10, font=dict(color=GREEN)))
+
+    fig.update_layout(scene=dict(annotations=annot, camera=camera))
+
+    return fig
+
+
+def create_rotation_axes(fig, annot):
+    cone_tip = 10
+    fig.add_trace(go.Scatter3d(x=[-70, 50], y=[0, 0], z=[0, 0], mode='lines', hoverinfo='skip', line=dict(color=BLUE)))
+    fig.add_trace(go.Cone(x=[50], y=[0], z=[0], u=[cone_tip * (50 - 48)], v=[0], w=[0], hoverinfo='none',
+                          showlegend=False, showscale=False, colorscale=[[0, BLUE], [1, BLUE]]))
+
+    fig.add_trace(go.Scatter3d(x=[0, 0], y=[-70, 50], z=[0, 0], mode='lines', hoverinfo='skip', line=dict(color=RED)))
+    fig.add_trace(go.Cone(x=[0], y=[50], z=[0], u=[0], v=[cone_tip * (50 - 48)], w=[0], hoverinfo='none',
+                          showlegend=False, showscale=False, colorscale=[[0, RED], [1, RED]]))
+
+    fig.add_trace(go.Scatter3d(x=[0, 0], y=[0, 0], z=[-70, 50], mode='lines', hoverinfo='skip', line=dict(color=GREEN)))
+    fig.add_trace(go.Cone(x=[0], y=[0], z=[50], u=[0], v=[0], w=[cone_tip * (50 - 48)], hoverinfo='none',
+                          showlegend=False, showscale=False, colorscale=[[0, GREEN], [1, GREEN]]))
+
+    annot.append(dict(showarrow=False, text="X", x=65, y=0, z=0, font=dict(color=BLUE)))
+    annot.append(dict(showarrow=False, text="Y", x=0, y=65, z=0, font=dict(color=RED)))
+    annot.append(dict(showarrow=False, text="Z", x=0, y=0, z=65, font=dict(color=GREEN)))
+    # fig.update_layout(scene=dict(annotations=annot))
+    # xaxis=dict(backgroundcolor="rgba(0, 0, 0, 0.2)"),
+    # yaxis=dict(backgroundcolor="rgba(0, 0, 0, 0.2)"),
+    # zaxis=dict(backgroundcolor="rgba(0, 0, 0, 0.2)")))
 
 
 @app.callback(
@@ -105,6 +170,7 @@ def create_3dgraph(method, organs, mode, fst_timestamp, snd_timestamp, opacity_s
     :return: the 3d figure
     """
     global patient_id
+    global camera_g
 
     fst_timestamp = "_plan" if fst_timestamp == "plan" else fst_timestamp
     snd_timestamp = "_plan" if snd_timestamp == "plan" else snd_timestamp
@@ -382,11 +448,11 @@ def create_graph_slices(x_slider, y_slider, z_slider, organs, method, mode,
     :return: the three slices figures
     """
     figures, fst_meshes, snd_meshes = [], [], []
-    names = ["X axis slice [mm]", "Y axis slice [mm]", "Z axis slice [mm]"]
+    names = ["X axis slice", "Y axis slice", "Z axis slice"]
 
     for i in range(3):
         layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)', height=310,
-                           width=320, plot_bgcolor='rgba(50,50,50,1)', margin=dict(l=30, r=20, t=60, b=40),
+                           width=320, plot_bgcolor='rgba(50,50,50,1)', margin=dict(l=40, r=30, t=60, b=60),
                            showlegend=False, title=dict(text=names[i]))
         fig = go.Figure(layout=layout)
         fig.update_layout(title_x=0.5)
@@ -494,17 +560,23 @@ def create_slice_helper(meshes, slice_slider, fig, color, axis):
             slices = create_slice(mesh, slice_slider, params)
             for _, x, y in slices:
                 fig.add_trace(go.Scatter(x=x, y=y, line=go.scatter.Line(color=color, width=3)))
+            fig.update_xaxes(title="y [mm]")
+            fig.update_yaxes(title="z [mm]")
 
         elif axis == "y":
             params = mesh.bounds[0][1], mesh.bounds[1][1], [mesh.centroid[0], 0, mesh.centroid[2]], [0, 1, 0], "y"
             slices = create_slice(mesh, slice_slider, params)
             for x, _, y in slices:
                 fig.add_trace(go.Scatter(x=x, y=y, line=go.scatter.Line(color=color, width=3)))
+            fig.update_xaxes(title="x [mm]")
+            fig.update_yaxes(title="z [mm]")
         else:
             params = mesh.bounds[0][2], mesh.bounds[1][2], [mesh.centroid[0], mesh.centroid[1], 0], [0, 0, 1], "z"
             slices = create_slice(mesh, slice_slider, params)
             for x, y, _ in slices:
                 fig.add_trace(go.Scatter(x=x, y=y, line=go.scatter.Line(color=color, width=3)))
+            fig.update_xaxes(title="x [mm]")
+            fig.update_yaxes(title="y [mm]")
 
 
 def create_slice_final(slice_slider, icp_meshes, centered_meshes, fig, axis):
@@ -632,8 +704,10 @@ def create_distances_after_icp(click_data, center_click_data, differences, avera
     fig.add_trace(go.Scattergl(x=np.array(range(1, 14)), y=prostate, mode="lines+markers", name="Prostate",
                                marker=dict(color=colors[0], size=sizes[0], line_color=colors[0], opacity=1)))
     fig.add_trace(go.Scattergl(x=np.array(range(1, 14)), y=bladder, mode="lines+markers", name="Bladder",
+                               line=dict(color=GREEN),
                                marker=dict(color=colors[1], size=sizes[1], line_color=colors[1], opacity=1)))
     fig.add_trace(go.Scattergl(x=np.array(range(1, 14)), y=rectum, mode="lines+markers", name="Rectum",
+                               line=dict(color=RED),
                                marker=dict(color=colors[2], size=sizes[2], line_color=colors[2], opacity=1)))
 
     fig.update_xaxes(title_text="Timestamp", tick0=0, dtick=1)
@@ -697,8 +771,10 @@ def create_distances_after_centering(icp_click_data, click_data, differences, av
                                line=dict(color=PURPLE),
                                marker=dict(color=colors[0], size=sizes[0], line_color=colors[0], opacity=1)))
     fig.add_trace(go.Scattergl(x=np.array(range(1, 14)), y=bladder, mode="lines+markers", name="Bladder",
+                               line=dict(color=GREEN),
                                marker=dict(color=colors[1], size=sizes[1], line_color=colors[1], opacity=1)))
     fig.add_trace(go.Scattergl(x=np.array(range(1, 14)), y=rectum, mode="lines+markers", name="Rectum",
+                               line=dict(color=RED),
                                marker=dict(color=colors[2], size=sizes[2], line_color=colors[2], opacity=1)))
     fig.update_xaxes(title_text="Timestamp", tick0=0, dtick=1)
     fig.update_yaxes(title_text="Distance [mm]")
@@ -821,6 +897,9 @@ with open("computations_files/center_distances.txt", "r") as center_dist, open(
     avrg_bones_center = list(map(float, lines[::3]))
     avrg_bladder_center = list(map(float, lines[1::3]))
     avrg_rectum_center = list(map(float, lines[2::3]))
+
+with open("computations_files/rotation_icp.txt", "r") as rotations_icp:
+    rotations = json.load(rotations_icp)
 
 with open("computations_files/plan_center_points.txt", "r") as center_points:
     plan_center_points = json.load(center_points)
@@ -1176,9 +1255,9 @@ def create_heatmap_annotations(fig):
     fig.add_trace(go.Scatter(x=list(range(1, 13 * 4, 4)), y=[8] * 13, mode="markers", name="Prostate",
                              marker=dict(symbol="circle", color=BLUE, size=10)))
     fig.add_trace(go.Scatter(x=list(range(2, 13 * 4, 4)), y=[8] * 13, mode="markers", name="Bladder",
-                             marker=dict(symbol="square", color=RED, size=10)))
+                             marker=dict(symbol="square", color=GREEN, size=10)))
     fig.add_trace(go.Scatter(x=list(range(3, 13 * 4, 4)), y=[8] * 13, mode="markers", name="Rectum",
-                             marker=dict(symbol="diamond", color=GREEN, size=10)))
+                             marker=dict(symbol="diamond", color=RED, size=10)))
 
 
 def decide_heatmap_highlights(fig, data, click_id):
@@ -1188,7 +1267,7 @@ def decide_heatmap_highlights(fig, data, click_id):
     :param data: clickData from the clicked graph
     :param click_id: id of the clicked graph
     """
-    print(data)
+
     # clicking on the help "annotation traces" in heatmaps
     if "heatmap" in click_id and data["curveNumber"] != 0:
         return
@@ -1243,6 +1322,43 @@ def create_data_for_heatmap(icp):
         hover_text.append(hover_row)
 
     return data, custom_data, hover_text
+
+
+@app.callback(
+    Output("rotations-graph", "figure"),
+    Input("heatmap-icp", "clickData"),
+    Input("heatmap-center", "clickData"),
+    Input("average-icp", "clickData"),
+    Input("average-center", "clickData"))
+def create_rotation_icp_graph(heatmap_icp, heatmap_center, average_icp, average_center):
+    global patient_id
+
+    # all_click_data = [differences, organs_icp, organs_center, average_icp, average_center, heatmap_icp, heatmap_center]
+    # all_ids = ["alignment-differences", "organs-icp", "organs-center", "average-icp", "average-center",
+    #            "heatmap-icp", "heatmap-center"]
+    # click_data, click_id = resolve_click_data(all_click_data, all_ids)
+    #
+    # if click_data:
+    #     colors = decide_rotation_highlights(click_data, click_id)
+
+    rot_x, rot_y, rot_z = rotations[PATIENTS.index(patient_id)][0]
+
+    layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)',
+                       margin=dict(t=80, b=70, l=90, r=40),
+                       plot_bgcolor='rgba(70,70,70,1)', width=1420, height=350,
+                       title=dict(
+                           text="Rotation angles after ICP bones alignment of patient {}".format(patient_id),
+                           font=dict(size=18, color='lightgrey')))
+    fig = go.Figure(layout=layout)
+    fig.add_trace(go.Bar(x=np.array(range(1, 14)), y=rot_x, name="X"))
+    fig.add_trace(go.Bar(x=np.array(range(1, 14)), y=rot_y, name="Y"))
+    fig.add_trace(go.Bar(x=np.array(range(1, 14)), y=rot_z, name="Z"))
+
+    fig.update_xaxes(title_text="Timestamp", tick0=0, dtick=1)
+    fig.update_yaxes(title_text="Angle [°]")
+    fig.update_layout(title_x=0.5, font=dict(size=14), title_y=0.90)
+
+    return fig
 
 
 if __name__ == '__main__':

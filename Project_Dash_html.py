@@ -48,7 +48,7 @@ layout = html.Div(className="row", children=[
                        "padding": "10px 30px 10px 30px"}),
 
         html.H6("Patients overview section", style={"margin": "20px 40px 20px 40px", "color": "#171717", "font-size":
-                                                    "20pt",
+            "20pt",
                                                     "font-family": "Bahnschrift", 'font-weight': 'bold',
                                                     "background-color": "#C7C7C7", "border-radius": "5px",
                                                     "padding": "10px 0px 10px 0px", "text-align": "center"}),
@@ -194,7 +194,10 @@ layout = html.Div(className="row", children=[
                                 "padding": "0px 0px 0px 40px"}),
 
                 dcc.Graph(id="main-graph", style={"padding": "20px 0px 0px 45x", "display": "inline-block",
-                                                  "margin": "20px 0px 45px 45px", "width": "92.4%"})
+                                                  "margin": "20px 0px 20px 45px", "width": "92.4%"}),
+
+                dcc.Graph(id="rotations-axes", style={"position": "absolute", "margin": "0px 0px 0px 0px",
+                                                      "top": "545%", "left": "36%"}, config={'displayModeBar': False}),
             ]),
 
             # SLICES ---------------------------------------------------------------------------------------------
@@ -212,13 +215,13 @@ layout = html.Div(className="row", children=[
                         dcc.Slider(min=0, max=1, value=0.5, id="y-slice-slider", marks=None),
                         html.H6("Z axes slice:"),
                         dcc.Slider(min=0, max=1, value=0.5, id="z-slice-slider", marks=None)
-                    ], style={"margin": "5px 0px 0px 0px", "padding": "20px 20px 20px 20px"})
+                    ], style={"margin": "5px 0px 0px 0px", "padding": "20px 20px 20px 20px"}),
                 ]),
-
                 dcc.Graph(id="x-slice-graph"),
-                dcc.Graph(id="y-slice-graph", style={"margin": "20px 0px 0px 0px"}),
-                dcc.Graph(id="z-slice-graph", style={"margin": "20px 0px 0px 0px"})
+                dcc.Graph(id="y-slice-graph"),
+                dcc.Graph(id="z-slice-graph")
             ])
         ])
     ]),
+    dcc.Graph(id="rotations-graph", style={"padding": "20px 30px 80px 40px"}),
 ])
