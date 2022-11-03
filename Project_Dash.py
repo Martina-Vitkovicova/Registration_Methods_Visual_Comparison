@@ -1004,9 +1004,10 @@ def decide_average_highlights(data, click_id, icp):
     Input("heatmap-icp", "clickData"),
     Input("heatmap-center", "clickData"),
     Input("rotations-graph", "clickData"),
-    Input("scale-average", "value"))
+    Input("scale-average", "value"),
+    Input("average-center", "relayoutData"))
 def average_distances_icp(differences, organs_icp, organs_center, click_data, center_click_data, heatmap_icp,
-                          heatmap_center, rotations_graph, scale):
+                          heatmap_center, rotations_graph, scale, center_relayout):
     """
     Creates the average_icp graph which shows the average movements of patient's organs after icp aligning.
     :param differences: clickData from the differences graph
@@ -1044,13 +1045,18 @@ def average_distances_icp(differences, organs_icp, organs_center, click_data, ce
                                marker=dict(symbol="diamond", color=RED, line=dict(width=sizes[2], color=colors[2]))))
 
     fig.update_traces(marker=dict(size=12))
-    fig.update_xaxes(title_text="Patient")
+    fig.update_xaxes(title_text="Patient", autorange=False)
+    fig.update_yaxes(title_text="Average distance [mm]", autorange=False)
+    fig.update_layout(title_x=0.5, font=dict(size=14), title_y=0.90)
+
+    if center_relayout and "xaxis.range[0]" in center_relayout.keys():
+        fig.update_xaxes(range=[center_relayout["xaxis.range[0]"], center_relayout["xaxis.range[1]"]])
+    if center_relayout and "yaxis.range[0]" in center_relayout.keys():
+        fig.update_yaxes(range=[center_relayout["yaxis.range[0]"], center_relayout["yaxis.range[1]"]])
 
     if "uniform" in scale:
+        fig.update_xaxes(range=[-0.5, 7.5])
         fig.update_yaxes(range=[-5, 85])
-
-    fig.update_yaxes(title_text="Average distance [mm]")
-    fig.update_layout(title_x=0.5, font=dict(size=14), title_y=0.90)
 
     return fig
 
@@ -1065,9 +1071,10 @@ def average_distances_icp(differences, organs_icp, organs_center, click_data, ce
     Input("heatmap-icp", "clickData"),
     Input("heatmap-center", "clickData"),
     Input("rotations-graph", "clickData"),
-    Input("scale-average", "value"))
+    Input("scale-average", "value"),
+    Input("average-icp", "relayoutData"))
 def average_distances_center(differences, organs_icp, organs_center, icp_click_data, click_data, heatmap_icp,
-                             heatmap_center, rotations_graph, scale):
+                             heatmap_center, rotations_graph, scale, icp_relayout):
     """
     Creates the average_center graph which shows the average movements of patient's organs after centering on prostate.
     :param differences: clickData from the differences graph
@@ -1083,8 +1090,7 @@ def average_distances_center(differences, organs_icp, organs_center, icp_click_d
     colors = [[PURPLE] * 8, [GREEN] * 8, [RED] * 8]
     sizes = [[0] * 8, [0] * 8, [0] * 8]
     layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)', margin=dict(t=80, b=70,
-                                                                                                           l=90, r=81),
-                       plot_bgcolor='rgba(70,70,70,1)', width=680, height=350, showlegend=True,
+                       l=90, r=81), plot_bgcolor='rgba(70,70,70,1)', width=680, height=350, showlegend=True,
                        title=dict(text="Average difference of patients' organs positions after centering on prostate",
                                   font=dict(size=16, color='lightgrey')))
     fig = go.Figure(layout=layout)
@@ -1105,14 +1111,20 @@ def average_distances_center(differences, organs_icp, organs_center, icp_click_d
     fig.add_trace(go.Scatter(x=PATIENTS, y=avrg_rectum_center, mode="markers", name="Rectum",
                              marker=dict(symbol="diamond", color=RED, line=dict(width=sizes[2], color=colors[2]))))
 
-    fig.update_traces(marker=dict(size=12))
-    fig.update_xaxes(title_text="Patient")
-    fig.update_yaxes(title_text="Average distance [mm]")
+    if icp_relayout and "xaxis.range[0]" in icp_relayout.keys():
+        fig.update_xaxes(range=[icp_relayout["xaxis.range[0]"], icp_relayout["xaxis.range[1]"]])
+    if icp_relayout and "yaxis.range[0]" in icp_relayout.keys():
+        fig.update_yaxes(range=[icp_relayout["yaxis.range[0]"], icp_relayout["yaxis.range[1]"]])
 
-    if "uniform" in scale:
+    if "uniform" in scale and not icp_relayout or \
+            ("xaxis.range[0]" not in icp_relayout.keys() and "yaxis.range[0]" not in icp_relayout.keys()):
+        fig.update_xaxes(range=[-0.5, 7.5])
         fig.update_yaxes(range=[-5, 85])
 
+    fig.update_traces(marker=dict(size=12))
     fig.update_layout(title_x=0.5, font=dict(size=14), title_y=0.90)
+    fig.update_xaxes(title_text="Patient", autorange=False)
+    fig.update_yaxes(title_text="Average distance [mm]", autorange=False)
 
     return fig
 
