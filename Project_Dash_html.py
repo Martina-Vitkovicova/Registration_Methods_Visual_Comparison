@@ -1,4 +1,5 @@
 from dash import html, dcc
+import constants
 
 TIMESTAMPS = ["plan"] + list(range(1, 14))
 
@@ -19,8 +20,8 @@ layout = html.Div(className="row", children=[
         show the difference between the two registration methods to improve prostate cancer patients' treatment 
         planning.""",
                 style={"margin-left": "40px", "margin-right": "40px", "margin-top": "10px", "margin-bottom": "10px",
-                       "color": "#081e5e", "font-size": "15pt", "background-color": "#c0d9f2", "border-radius": "5px",
-                       "padding": "10px 30px 10px 30px"}),
+                       "color": "#081e5e", "font-size": "15pt", "background-color": constants.LIGHT_GREY,
+                       "border-radius": "5px", "padding": "10px 30px 10px 30px"}),
 
         dcc.Markdown("""The **ICP** (Iterative Closest Point) is a registration method used to align the anatomy 
         based on the patient's bones. **Prostate centring**, the second registration method, considers the prostate's 
@@ -30,7 +31,8 @@ layout = html.Div(className="row", children=[
         than the prostate.""",
                      style={"margin-left": "40px", "margin-right": "40px", "margin-top": "10px",
                             "margin-bottom": "10px", "color": "#081e5e", "font-size": "15pt",
-                            "background-color": "#c0d9f2", "border-radius": "5px", "padding": "10px 30px 10px 30px"}),
+                            "background-color": constants.LIGHT_GREY, "border-radius": "5px",
+                            "padding": "10px 30px 10px 30px"}),
 
         html.H6("""The comparison between these two methods is demonstrated on eight patients during 13 treatment 
         appointments. There are several graphs that depict the distinction from different points of view, 
@@ -41,7 +43,7 @@ layout = html.Div(className="row", children=[
         first cell in line with number 722, all graphs in the individual patient section will show the patient number 
         722 instead of the number 137 displayed by default.""",
                 style={"margin-left": "40px", "margin-right": "40px", "margin-top": "10px", "margin-bottom": "10px",
-                       "color": "#081e5e", "font-size": "15pt", "background-color": "#c0d9f2", "border-radius": "5px",
+                       "color": "#081e5e", "font-size": "15pt", "background-color": constants.LIGHT_GREY, "border-radius": "5px",
                        "padding": "10px 30px 10px 30px"}),
 
         html.H6("Patients overview section", style={"margin": "20px 40px 20px 40px", "color": "#171717", "font-size":
@@ -56,7 +58,7 @@ layout = html.Div(className="row", children=[
         graphs. In the prostate centring chart, bones are included instead of the prostate because the prostate is the 
         centre of the alignment; therefore, the distance would be zero every time.""",
                 style={"margin-left": "40px", "margin-right": "40px", "color": "#081e5e",
-                       "background-color": "#c0f2cc", "border-radius": "5px",
+                       "background-color": constants.LIGHT_GREY, "border-radius": "5px",
                        "padding": "10px 30px 10px 30px"}),
 
         html.Div(className="row", style={"textAlign": "center"}, children=[
@@ -76,7 +78,7 @@ layout = html.Div(className="row", children=[
         heatmaps' cells, one can see exact information about the cell, such as the organ one is looking at, 
         movement distance, patient ID, and others.""",
                 style={"margin-left": "40px", "margin-right": "40px", "color": "#081e5e",
-                       "background-color": "#c0f2d9", "border-radius": "5px",
+                       "background-color": constants.LIGHT_GREY, "border-radius": "5px",
                        "padding": "10px 30px 10px 30px"}),
 
         html.Div(className="row", style={"textAlign": "center"}, children=[
@@ -101,7 +103,7 @@ layout = html.Div(className="row", children=[
         patient during the treatment period - 13 appointments. By clicking on the traces in the legend, 
         one can regulate their visibility.""",
                 style={"margin-left": "40px", "margin-right": "40px", "margin-top": "30px", "color": "#081e5e",
-                       "background-color": "#c0f2cc", "border-radius": "5px",
+                       "background-color": constants.LIGHT_GREY, "border-radius": "5px",
                        "padding": "10px 30px 10px 30px"})]),
 
     html.Div(className="row", style={"textAlign": "center"}, children=[
@@ -122,7 +124,7 @@ layout = html.Div(className="row", children=[
         depicted in the previous two graphs. In the positive part of the vertical axis, the organs moved more during 
         ICP aligning. In the negative part, there was a greater movement during the centring method.""",
                 style={"margin-left": "40px", "margin-right": "40px", "color": "#081e5e",
-                       "background-color": "#c0f2cc", "border-radius": "5px",
+                       "background-color": constants.LIGHT_GREY, "border-radius": "5px",
                        "padding": "10px 30px 10px 30px"}),
 
         html.Div(className="row", children=[
@@ -133,7 +135,7 @@ layout = html.Div(className="row", children=[
     html.H6("""This graph depicts how the organs in a given time rotated in relation to the organs in the plan 
     images. The rotations along the three axes were computed with the ICP algorithm, and they are shown in angles.""",
             style={"margin-left": "40px", "margin-right": "40px", "color": "#081e5e",
-                   "background-color": "#c0f2cc", "border-radius": "5px",
+                   "background-color": constants.LIGHT_GREY, "border-radius": "5px",
                    "padding": "10px 30px 10px 30px"}),
 
     dcc.Graph(id="rotations-graph", style={"padding": "20px 30px 10px 40px"}),
@@ -156,7 +158,7 @@ layout = html.Div(className="row", children=[
             but in the 2D slices along the main anatomical planes. There are three sliders that can be used to move 
             the imaged slice in the direction of the given axis.""",
                     style={"margin-left": "40px", "margin-right": "40px", "color": "#081e5e",
-                           "background-color": "#c0f2cc", "border-radius": "5px",
+                           "background-color": constants.LIGHT_GREY, "border-radius": "5px",
                            "padding": "20px 20px 20px 20px"})]),
 
         html.Div(className="row", children=[
@@ -197,9 +199,9 @@ layout = html.Div(className="row", children=[
                                                      "justify-content": "space-evenly",
                                                      "margin": "20px 0px 0px 45px"}, children=[
 
-                dcc.Graph(id="rotations-axes", style={"padding": "25px 0px 0px 0px"}),
+                dcc.Graph(id="rotations-axes", style={"padding": "45px 0px 0px 0px"}),
 
-                html.Div(style={"padding": "15px 0px 0px 0px"}, children=[
+                html.Div(style={"padding": "7px 0px 0px 0px"}, children=[
                     # html.H6("X axes slice:", id="x-slice-header"),
                     dcc.Slider(min=0, max=1, value=0.5, id="x-slice-slider", marks=None),
                     dcc.Graph(id="x-slice-graph")]),
