@@ -112,8 +112,11 @@ def options_visibility(mode):
     Input("heatmap-icp", "clickData"),
     Input("heatmap-center", "clickData"),
     Input("average-icp", "clickData"),
-    Input("average-center", "clickData"))
-def create_3d_angle(heatmap_icp, heatmap_center, average_icp, average_center):
+    Input("average-center", "clickData"),
+    Input("alignment-radioitems", "value"),
+    Input("mode-radioitems", "value"),
+    Input("fst-timestamp-dropdown", "value"))
+def create_3d_angle(heatmap_icp, heatmap_center, average_icp, average_center, method, mode, fst_timestamp):
     layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)', showlegend=False,
                        plot_bgcolor='rgba(50,50,50,1)', margin=dict(l=10, r=10, t=10, b=10), height=280, width=320)
     fig = go.Figure(layout=layout)
@@ -127,18 +130,25 @@ def create_3d_angle(heatmap_icp, heatmap_center, average_icp, average_center):
     t = np.linspace(0, 10, steps)
     x, y, z = 20, np.cos(t) * size, np.sin(t) * size
 
+    if "ICP" in method and "Two" in mode and fst_timestamp == "plan":
+        text_x = str(round(rotations[PATIENTS.index(patient_id)][0][0][timestamp_i], 2)) + "°"
+        text_y = str(round(rotations[PATIENTS.index(patient_id)][0][1][timestamp_i], 2)) + "°"
+        text_z = str(round(rotations[PATIENTS.index(patient_id)][0][2][timestamp_i], 2)) + "°"
+    else:
+        text_x, text_y, text_z = "0°", "0°", "0°"
+
     fig.add_trace(go.Scatter3d(mode="lines", x=[x] * 25, y=y, z=z, line=dict(width=5, color=CYAN1),
                                hoverinfo='none'))
     fig.add_trace(go.Cone(x=[x], y=[y[0]], z=[z[0]], u=[0], v=[cone_tip * (y[0] - y[1])], w=[cone_tip * (z[0] - z[1])],
                           showlegend=False, showscale=False, colorscale=[[0, CYAN1], [1, CYAN1]],
                           hoverinfo='none'))
-    annot.append(dict(showarrow=False, text="0.8°", x=25, y=-25, z=0, font=dict(color=CYAN1, size=15)))
+    annot.append(dict(showarrow=False, text=text_x, x=25, y=-25, z=0, font=dict(color=CYAN1, size=15)))
 
     x, y, z = np.cos(t) * size, 20, np.sin(t) * size
     fig.add_trace(go.Scatter3d(mode="lines", x=x, y=[y] * 25, z=z, line=dict(width=5, color=CYAN2), hoverinfo='none'))
     fig.add_trace(go.Cone(x=[x[0]], y=[y], z=[z[0]], u=[cone_tip * (x[0] - x[1])], v=[0], w=[cone_tip * (z[0] - z[1])],
                           showlegend=False, showscale=False, colorscale=[[0, CYAN2], [1, CYAN2]], hoverinfo='none'))
-    annot.append(dict(showarrow=False, text="1.5°", x=5, y=35, z=15, font=dict(color=CYAN2, size=15)))
+    annot.append(dict(showarrow=False, text=text_y, x=5, y=35, z=15, font=dict(color=CYAN2, size=15)))
 
     x, y, z = np.cos(t) * size, np.sin(t) * size, 20
     fig.add_trace(go.Scatter3d(mode="lines", x=x, y=y, z=[z] * 25, line=dict(width=5, color=CYAN3),
@@ -146,7 +156,7 @@ def create_3d_angle(heatmap_icp, heatmap_center, average_icp, average_center):
     fig.add_trace(go.Cone(x=[x[0]], y=[y[0]], z=[z], u=[cone_tip * (x[0] - x[1])], v=[cone_tip * (y[0] - y[1])],
                           w=[0], showlegend=False, showscale=False, colorscale=[[0, CYAN3], [1, CYAN3]],
                           hoverinfo='none'))
-    annot.append(dict(showarrow=False, text="3.2°", x=10, y=-10, z=z + 10, font=dict(color=CYAN3, size=15)))
+    annot.append(dict(showarrow=False, text=text_z, x=10, y=-10, z=z + 10, font=dict(color=CYAN3, size=15)))
 
     fig.update_layout(scene=dict(annotations=annot, camera=camera))
 
@@ -165,7 +175,7 @@ def create_rotation_axes(fig, annot):
     fig.add_trace(go.Cone(x=[0], y=[50], z=[0], u=[0], v=[cone_tip * (50 - 48)], w=[0], hoverinfo='none',
                           showlegend=False, showscale=False, colorscale=[[0, CYAN2], [1, CYAN2]]))
 
-    fig.add_trace(go.Scatter3d(x=[0, 0], y=[0, 0], z=[-70, 50], mode='lines', hoverinfo='skip',
+    fig.add_trace(go.Scatter3d(x=[0, 0], y=[0, 0], z=[-50, 50], mode='lines', hoverinfo='skip',
                                line=dict(color=CYAN3, width=7)))
     fig.add_trace(go.Cone(x=[0], y=[0], z=[50], u=[0], v=[0], w=[cone_tip * (50 - 48)], hoverinfo='none',
                           showlegend=False, showscale=False, colorscale=[[0, CYAN3], [1, CYAN3]]))
