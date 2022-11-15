@@ -1,6 +1,6 @@
 from copy import deepcopy
 import trimesh
-from dash import Dash, Output, Input, callback_context
+from dash import Dash, Output, Input, callback_context, html, dcc
 import numpy as np
 import plotly.graph_objects as go
 import Project_2
@@ -8,8 +8,8 @@ import Project_Dash_html
 import json
 
 import constants
-from constants import FILEPATH, PATIENTS, TIMESTAMPS, LIGHT_BLUE, CYAN1, RED, GREEN, GREY, PURPLE, CONE_TIP, CYAN2,\
-    CYAN3, LIGHT_GREY, PINK, ORANGE
+from constants import FILEPATH, PATIENTS, TIMESTAMPS, LIGHT_BLUE, CYAN1, RED, GREEN, PURPLE, CYAN2, GREY, CYAN3, PINK, \
+    ORANGE
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 app = Dash(__name__, external_stylesheets=external_stylesheets)
@@ -17,32 +17,28 @@ app.layout = Project_Dash_html.layout
 
 patient_id = "137"
 timestamp_i = 0  # one lower than actual timestamp because used as index
-max_bones_distance = 35
 camera_g = dict(up=dict(x=0, y=0, z=1), center=dict(x=0, y=0, z=0), eye=dict(x=0.5, y=-2, z=0))
 
-with open("computations_files/icp_distances.txt", "r") as icp_dist, open("computations_files/icp_movements.txt", "r") \
-        as icp_mov, open("computations_files/icp_averages.txt", "r") as icp_avrg:
+with open("../computations_files/icp_distances_c.txt", "r") as icp_dist,\
+        open("../computations_files/icp_averages_c.txt", "r") as icp_avrg:
     all_distances_icp = json.load(icp_dist)
-    all_movements_icp = json.load(icp_mov)
     lines = icp_avrg.read().splitlines()
     avrg_prostate_icp = list(map(float, lines[::3]))
     avrg_bladder_icp = list(map(float, lines[1::3]))
     avrg_rectum_icp = list(map(float, lines[2::3]))
 
-with open("computations_files/center_distances.txt", "r") as center_dist, open(
-        "computations_files/center_movements.txt", "r") as center_mov, \
-        open("computations_files/center_averages.txt", "r") as center_avrg:
+with open("../computations_files/center_distances_c.txt", "r") as center_dist,\
+        open("../computations_files/center_averages_c.txt", "r") as center_avrg:
     all_distances_center = json.load(center_dist)
-    all_movements_center = json.load(center_mov)
     lines = center_avrg.read().splitlines()
     avrg_bones_center = list(map(float, lines[::3]))
     avrg_bladder_center = list(map(float, lines[1::3]))
     avrg_rectum_center = list(map(float, lines[2::3]))
 
-with open("computations_files/rotation_icp.txt", "r") as rotations_icp:
+with open("../computations_files/rotation_icp.txt", "r") as rotations_icp:
     rotations = json.load(rotations_icp)
 
-with open("computations_files/plan_center_points.txt", "r") as center_points:
+with open("../computations_files/plan_center_points.txt", "r") as center_points:
     plan_center_points = json.load(center_points)
 
 
@@ -184,9 +180,9 @@ def create_rotation_axes(fig, annot):
     annot.append(dict(showarrow=False, text="Y", x=0, y=65, z=0, font=dict(color=CYAN2, size=16)))
     annot.append(dict(showarrow=False, text="Z", x=0, y=0, z=65, font=dict(color=CYAN3, size=16)))
 
-    fig.update_layout(scene=dict(xaxis=dict(backgroundcolor=GREY, gridcolor=LIGHT_GREY),
-                      yaxis=dict(backgroundcolor=GREY, gridcolor=LIGHT_GREY),
-                      zaxis=dict(backgroundcolor=GREY, gridcolor=LIGHT_GREY)))
+    fig.update_layout(scene=dict(xaxis=dict(backgroundcolor=constants.GREY2, gridcolor=constants.LIGHT_GREY2),
+                      yaxis=dict(backgroundcolor=constants.GREY2, gridcolor=constants.LIGHT_GREY2),
+                      zaxis=dict(backgroundcolor=constants.GREY2, gridcolor=constants.LIGHT_GREY2)))
 
 
 @app.callback(
@@ -267,7 +263,6 @@ def decide_3d_graph_mode(mode, fig, method, organs, fst_timestamp, snd_timestamp
     if "Two timestamps" in mode:
         fst_meshes, snd_meshes, center1_after, center2_after = \
             two_timestamps_mode(method, fst_timestamp, snd_timestamp, objects_fst, objects_snd)
-        draw_movement_arrow(fig, center1_after, center2_after)
 
         fst_timestamp = "plan organs" if "_plan" == fst_timestamp else "timestamp number {}".format(fst_timestamp)
         snd_timestamp = "plan organs" if "_plan" == snd_timestamp else "timestamp number {}".format(snd_timestamp)
@@ -281,25 +276,6 @@ def decide_3d_graph_mode(mode, fig, method, organs, fst_timestamp, snd_timestamp
         fig.update_layout(title_text="Plan organs of patient {}".format(patient_id), title_x=0.5, title_y=0.95)
 
     return fst_meshes, snd_meshes
-
-
-def plan_organs_mode(fig, mov, organs):
-    """
-    Decides the text for the 3D graph and mode of the movement vectors
-    :param fig: 3D figure
-    :param mov: the mode of the movement vectors selected
-    :param organs: chosen organs
-    :return: the correct text
-    """
-    text = ""
-    if "average" in mov:
-        create_average_movement_lines(fig, organs)
-        text = "with the vectors of average organs movements"
-    elif "all" in mov:
-        draw_all_movements(fig, organs)
-        text = "with all of the organ movements vectors"
-
-    return text
 
 
 def two_timestamps_mode(method, fst_timestamp, snd_timestamp, objects_fst, objects_snd):
@@ -328,24 +304,6 @@ def two_timestamps_mode(method, fst_timestamp, snd_timestamp, objects_fst, objec
     return fst_meshes, snd_meshes, center1_after, center2_after
 
 
-def draw_movement_arrow(fig, center1_after, center2_after):
-    """
-    Create an arrow which show the direction of the moved organs.
-    :param fig: the 3d figure
-    :param center1_after: center of the first organ after the alignment
-    :param center2_after: center of the second organ after the alignment
-    """
-    x1, y1, z1 = center1_after[0][0][0]
-    x2, y2, z2 = center2_after[0][0][0]
-    cone_tip = 0.9 * np.sqrt((x2 - x1) ** 2 + (x2 - x1) ** 2)
-
-    fig.add_trace(go.Scatter3d(x=[x1, x2], y=[y1, y2], z=[z1, z2], mode='lines',
-                               showlegend=False, line=dict(width=6, color=PINK)))
-    fig.add_trace(go.Cone(x=[x2], y=[y2], z=[z2], u=[cone_tip * (x2 - x1)], v=[cone_tip * (y2 - y1)],
-                          w=[cone_tip * (z2 - z1)], colorscale=[[0, ORANGE], [1, ORANGE]], showlegend=False,
-                          showscale=False))
-
-
 def get_meshes_after_icp(timestamp, objects, patient, color=PINK):
     """
     Runs functions which perform the icp aligning.
@@ -355,7 +313,7 @@ def get_meshes_after_icp(timestamp, objects, patient, color=PINK):
 
     plan_bones = Project_2.import_obj([FILEPATH + "{}\\bones\\bones_plan.obj".format(patient)])
     bones = Project_2.import_obj([FILEPATH + "{}\\bones\\bones{}.obj".format(patient, timestamp)])
-    bones_center_before = Project_2.find_center_point(bones[0][0])
+    bones_center_before = Project_2.find_center_of_mass(bones[0][0])
 
     transform_matrix, vec = Project_2.icp_rot_vec(bones[0][0], plan_bones[0][0])
     transfr_objects = Project_2.vertices_transformation(transform_matrix, deepcopy(objects))
@@ -374,11 +332,11 @@ def get_meshes_after_centering(timestamp, objects, patient, color=ORANGE):
     """
 
     prostate = Project_2.import_obj([FILEPATH + "{}\\prostate\\prostate{}.obj".format(patient, timestamp)])
-    center_before = Project_2.find_center_point(prostate[0][0])
+    center_before = Project_2.find_center_of_mass(prostate[0][0])
 
-    plan_center = Project_2.find_center_point(Project_2.import_obj(
+    plan_center = Project_2.find_center_of_mass(Project_2.import_obj(
         [FILEPATH + "{}\\prostate\\prostate_plan.obj".format(patient)])[0][0])
-    other_center = Project_2.find_center_point(prostate[0][0])
+    other_center = Project_2.find_center_of_mass(prostate[0][0])
     center_matrix = Project_2.create_translation_matrix(plan_center, other_center)
     center_transfr_objects = Project_2.vertices_transformation(center_matrix, deepcopy(objects))
     after_center_meshes = create_meshes_from_objs(center_transfr_objects, color)
@@ -386,71 +344,6 @@ def get_meshes_after_centering(timestamp, objects, patient, color=ORANGE):
     center_after = Project_2.vertices_transformation(center_matrix, [[[plan_center]]])
 
     return after_center_meshes, center_before, center_after
-
-
-def draw_all_movements(fig, organs):
-    # it is only icp movement!!
-    for organ in organs:
-        for i in range(len(TIMESTAMPS)):
-            x1, y1, z1, x2, y2, z2 = 0, 0, 0, 0, 0, 0
-            if organ == "Prostate":
-                x1, y1, z1 = plan_center_points[PATIENTS.index(patient_id)][1]
-                x2, y2, z2 = all_movements_icp[PATIENTS.index(patient_id)][0][i]
-            elif organ == "Bladder":
-                x1, y1, z1 = plan_center_points[PATIENTS.index(patient_id)][2]
-                x2, y2, z2 = all_movements_icp[PATIENTS.index(patient_id)][1][i]
-            elif organ == "Rectum":
-                x1, y1, z1 = plan_center_points[PATIENTS.index(patient_id)][3]
-                x2, y2, z2 = all_movements_icp[PATIENTS.index(patient_id)][2][i]
-
-            fig.add_trace(go.Scatter3d(x=[x1, x2], y=[y1, y2], z=[z1, z2], mode='lines',
-                                       showlegend=False, line=dict(width=6, color=CYAN1)))
-            # cone_tip = 0.9 * np.sqrt((x2 - x1) ** 2 + (x2 - x1) ** 2)
-            fig.add_trace(go.Cone(x=[x2], y=[y2], z=[z2],
-                                  u=[CONE_TIP * (x2 - x1)], v=[CONE_TIP * (y2 - y1)], w=[CONE_TIP * (z2 - z1)],
-                                  colorscale=[[0, CYAN1], [1, CYAN1]], showlegend=False, showscale=False))
-
-
-def create_average_movement_lines(fig, organs):
-    for organ in organs:
-        name = organ.lower()
-        x1, y1, z1 = Project_2.find_center_point([], trimesh.load_mesh(
-            FILEPATH + "{}\\{}\\{}_plan.obj".format(patient_id, name, name)).bounds)
-        x2, y2, z2 = get_average_vector(name)
-
-        fig.add_trace(go.Scatter3d(x=[x1, x2], y=[y1, y2], z=[z1, z2], mode='lines',
-                                   showlegend=False, line=dict(width=6, color=CYAN1)))
-        fig.add_trace(go.Cone(x=[x2], y=[y2], z=[z2],
-                              u=[CONE_TIP * (x2 - x1)], v=[CONE_TIP * (y2 - y1)], w=[CONE_TIP * (z2 - z1)],
-                              colorscale=[[0, CYAN1], [1, CYAN1]], showlegend=False, showscale=False))
-
-
-def get_average_vector(organ_name):
-    avrg_movements = all_movements_center[PATIENTS.index(patient_id)]
-    avrg_bones, avrg_bladder, avrg_rectum = avrg_movements[0], avrg_movements[1], avrg_movements[2]
-
-    avrg_movements = all_movements_icp[PATIENTS.index(patient_id)]
-    avrg_prostate, avrg_bladder, avrg_rectum = avrg_movements[0], avrg_movements[1], avrg_movements[2]
-
-    if "bones" in organ_name:
-        mov_matrix = np.array(avrg_bones).T @ avrg_bones
-    elif "prostate" in organ_name:
-        mov_matrix = np.array(avrg_prostate).T @ avrg_prostate
-    elif "bladder" in organ_name:
-        mov_matrix = np.array(avrg_bladder).T @ avrg_bladder
-    else:
-        mov_matrix = np.array(avrg_rectum).T @ avrg_rectum
-
-    eigen_values, eigen_vectors = np.linalg.eigh(mov_matrix)
-    val_count = np.count_nonzero(eigen_values == eigen_values[-1])
-    if val_count == 1:
-        average_vec = eigen_vectors[-1]
-    else:
-        average_vec = []
-        for i in range(1, val_count + 1):
-            average_vec += eigen_vectors[-i]
-
-    return average_vec
 
 
 @app.callback(
@@ -526,8 +419,8 @@ def two_slices_mode(method, patient, organs, timestamp):
     else:
         plan_prostate = trimesh.load_mesh(FILEPATH + "{}\\prostate\\prostate_plan.obj".format(patient))
         prostate = trimesh.load_mesh(FILEPATH + "{}\\prostate\\prostate{}.obj".format(patient, timestamp))
-        key_center = Project_2.find_center_point(plan_prostate.vertices)
-        other_center = Project_2.find_center_point(prostate.vertices)
+        key_center = Project_2.find_center_of_mass(plan_prostate.vertices)
+        other_center = Project_2.find_center_of_mass(prostate.vertices)
         center_matrix = Project_2.create_translation_matrix(key_center, other_center)
         meshes = selected_organs_slices(center_matrix, organs, timestamp, patient)
 
@@ -723,7 +616,6 @@ def create_distances_after_centering(icp_click_data, click_data, differences, av
     :return:
     """
     global patient_id
-    global max_bones_distance
 
     colors = [[PURPLE] * 13, [GREEN] * 13, [RED] * 13]
     sizes = [[0] * 13, [0] * 13, [0] * 13]
@@ -748,17 +640,16 @@ def create_distances_after_centering(icp_click_data, click_data, differences, av
                            font=dict(size=18, color='lightgrey')))
     fig = go.Figure(layout=layout)
     fig.add_trace(go.Scattergl(x=np.array(range(1, 14)), y=bones, mode="lines+markers", name="Bones",
-                               marker=dict(color=PURPLE, line=dict(width=sizes[0], color=colors[0]))))
+                               marker=dict(color=PURPLE, symbol="circle", line=dict(width=sizes[0], color=colors[0]))))
     fig.add_trace(go.Scattergl(x=np.array(range(1, 14)), y=bladder, mode="lines+markers", name="Bladder",
-                               marker=dict(color=GREEN, line=dict(width=sizes[1], color=colors[1]))))
+                               marker=dict(color=GREEN, symbol="square", line=dict(width=sizes[1], color=colors[1]))))
     fig.add_trace(go.Scattergl(x=np.array(range(1, 14)), y=rectum, mode="lines+markers", name="Rectum",
-                               marker=dict(color=RED, line=dict(width=sizes[2], color=colors[2]))))
+                               marker=dict(color=RED, symbol="diamond", line=dict(width=sizes[2], color=colors[2]))))
     fig.update_xaxes(title_text="Timestamp", tick0=0, dtick=1)
     fig.update_yaxes(title_text="Distance [mm]")
 
     if "uniform" in scale:
-        max_bones_distance = max(fig["data"][0]["y"])
-        fig.update_yaxes(range=[0, max_bones_distance + 5])
+        fig.update_yaxes(range=[0, constants.scale[patient_id]])
 
     fig.update_traces(marker=dict(size=10))
     fig.update_layout(title_x=0.5, font=dict(size=14), title_y=0.90)
@@ -805,9 +696,10 @@ def create_distances_after_icp(center_click_data, click_data, differences, avera
 
     distances_icp = all_distances_icp[PATIENTS.index(patient_id)]
     prostate, bladder, rectum = distances_icp[0], distances_icp[1], distances_icp[2]
+    # print(constants.scale[patient_id])
 
     layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)',
-                       margin=dict(t=80, b=70, l=90),
+                       margin=dict(t=80, b=70, l=90), yaxis=dict(range=[0, constants.scale[patient_id]]),
                        plot_bgcolor='rgba(70,70,70,1)', width=680, height=350,
                        title=dict(
                            text="Distances of ICP aligned organs and the plan organs of patient {}".format(patient_id),
@@ -815,20 +707,24 @@ def create_distances_after_icp(center_click_data, click_data, differences, avera
 
     fig = go.Figure(layout=layout)
     fig.add_trace(go.Scattergl(x=np.array(range(1, 14)), y=prostate, mode="lines+markers", name="Prostate",
-                               marker=dict(color=LIGHT_BLUE, line=dict(width=sizes[0], color=colors[0]))))
+                               marker=dict(color=LIGHT_BLUE, symbol="x", line=dict(width=sizes[0], color=colors[0]))))
     fig.add_trace(go.Scattergl(x=np.array(range(1, 14)), y=bladder, mode="lines+markers", name="Bladder",
-                               marker=dict(color=GREEN, line=dict(width=sizes[1], color=colors[1]))))
+                               marker=dict(color=GREEN, symbol="square", line=dict(width=sizes[1], color=colors[1]))))
     fig.add_trace(go.Scattergl(x=np.array(range(1, 14)), y=rectum, mode="lines+markers", name="Rectum",
-                               marker=dict(color=RED, line=dict(width=sizes[2], color=colors[2]))))
+                               marker=dict(color=RED, symbol="diamond", line=dict(width=sizes[2], color=colors[2]))))
 
     fig.update_traces(marker=dict(size=10))
     fig.update_xaxes(title_text="Timestamp", tick0=0, dtick=1)
     fig.update_yaxes(title_text="Distance [mm]")
 
-    if "uniform" in scale:
-        fig.update_yaxes(range=[0, max_bones_distance + 5])
+    # if "uniform" in scale:
+    #     layout_yaxis_range=[0, constants.scale[patient_id]]
+        # fig.update_yaxes(range=[0, constants.scale[patient_id]])
 
     fig.update_layout(title_x=0.5, font=dict(size=14), title_y=0.90)
+
+    # fig_div = html.Div([dcc.Graph(figure=fig, style={'display': 'inline-block', "padding": "20px 10px 20px 20px"})],
+    #                    id='fig_div')
 
     return fig
 
@@ -958,7 +854,7 @@ def create_rotation_icp_graph(rotations_graph, heatmap_icp, heatmap_center, aver
                        margin=dict(t=80, b=70, l=90, r=40),
                        plot_bgcolor='rgba(70,70,70,1)', width=1420, height=350,
                        title=dict(
-                           text="Rotation angles after ICP bones alignment of patient {}".format(patient_id),
+                           text="Rotation angles after ICP bone alignment of patient {}".format(patient_id),
                            font=dict(size=18, color='lightgrey')))
     fig = go.Figure(layout=layout)
     fig.add_trace(go.Bar(x=np.array(range(1, 14)), y=rot_x, name="X", marker=dict(color=colors[0])))
@@ -1064,8 +960,8 @@ def average_distances_icp(differences, organs_icp, organs_center, click_data, ce
                                marker=dict(symbol="diamond", color=RED, line=dict(width=sizes[2], color=colors[2]))))
 
     fig.update_traces(marker=dict(size=12))
-    fig.update_xaxes(title_text="Patient", autorange=False)
-    fig.update_yaxes(title_text="Average distance [mm]", autorange=False)
+    fig.update_xaxes(title_text="Patient")
+    fig.update_yaxes(title_text="Average distance [mm]")
     fig.update_layout(title_x=0.5, font=dict(size=14), title_y=0.90)
 
     if center_relayout and "xaxis.range[0]" in center_relayout.keys():
@@ -1074,8 +970,8 @@ def average_distances_icp(differences, organs_icp, organs_center, click_data, ce
         fig.update_yaxes(range=[center_relayout["yaxis.range[0]"], center_relayout["yaxis.range[1]"]])
 
     if "uniform" in scale:
-        fig.update_xaxes(range=[-0.5, 7.5])
-        fig.update_yaxes(range=[-5, 85])
+        fig.update_xaxes(range=[-0.5, 7.5], autorange=False)
+        fig.update_yaxes(range=[-5, 89], autorange=False)
 
     return fig
 
@@ -1139,7 +1035,7 @@ def average_distances_center(differences, organs_icp, organs_center, icp_click_d
     if "uniform" in scale and not icp_relayout or \
             ("xaxis.range[0]" not in icp_relayout.keys() and "yaxis.range[0]" not in icp_relayout.keys()):
         fig.update_xaxes(range=[-0.5, 7.5])
-        fig.update_yaxes(range=[-5, 85])
+        fig.update_yaxes(range=[-5, 89])
 
     fig.update_traces(marker=dict(size=12))
     fig.update_layout(title_x=0.5, font=dict(size=14), title_y=0.90)
@@ -1161,6 +1057,7 @@ def resolve_click_data(click_data, ids):
         if input_id == click_id:
             return click_data[i], input_id
     return None, None
+
 
 def create_lines_for_heatmaps(fig):
     fig.add_shape(type="rect", x0=-0.48, y0=-0.5, x1=-0.48, y1=7.6, line_width=4.15, line_color=GREY)
@@ -1211,7 +1108,7 @@ def create_heatmap_icp(organs_icp, organs_center, differences, click_data, cente
                                         colorbar=dict(title="Distance<br>[mm]"),
                                         hovertemplate="<b>%{text}</b><br>Patient: %{y}<br>Timestamp: %{customdata}<br>"
                                                       "Distance: %{z:.2f} mm<extra></extra>",
-                                        colorscale=constants.COLORSCALE_BLACK), layout=layout)
+                                        colorscale=constants.HEATMAP_CS), layout=layout)
     else:
         fig = go.Figure(data=go.Heatmap(z=data, text=hover_text, customdata=custom_data,
                                         colorbar=dict(title="Distance<br>[mm]"),
@@ -1285,7 +1182,7 @@ def create_heatmap_centering(click_data, icp_click_data, differences, average_ic
                                         colorbar=dict(title="Distance<br>[mm]"),
                                         hovertemplate="<b>%{text}</b><br>Patient: %{y}<br>Timestamp: %{customdata}<br>"
                                                       "Distance: %{z:.2f} mm<extra></extra>",
-                                        colorscale=constants.COLORSCALE_BLACK), layout=layout)
+                                        colorscale=constants.HEATMAP_CS), layout=layout)
     else:
         fig = go.Figure(data=go.Heatmap(z=data, text=hover_text, customdata=custom_data,
                                         hovertemplate="<b>%{text}</b><br>Patient: %{y}<br>Timestamp: %{customdata}<br>"

@@ -114,6 +114,21 @@ def find_center_point(vertices, bounding_box=None):
     return x, y, z
 
 
+def find_center_of_mass(vertices):
+    center_x, center_y, center_z = 0, 0, 0
+
+    for x, y, z in vertices:
+        center_x += x
+        center_y += y
+        center_z += z
+
+    center_x /= len(vertices)
+    center_y /= len(vertices)
+    center_z /= len(vertices)
+
+    return center_x, center_y, center_z
+
+
 def create_translation_matrix(center, other_point):
     return [[1, 0, 0, center[0] - other_point[0]],
             [0, 1, 0, center[1] - other_point[1]],
@@ -121,85 +136,7 @@ def create_translation_matrix(center, other_point):
             [0, 0, 0, 1]]
 
 
-def visualize(object_list, align=False):
-    """
-    Use trimesh library to visualize the objects from the object_list
-    Align argument is just for colour changing
-    """
-    index = 0
-    scene = trimesh.scene.scene.Scene()
-
-    for verts, faces in object_list:
-        if align:
-            if index == 0:
-                mesh = trimesh.Trimesh(verts, faces, face_colors=[20, 100, 180, 200])
-            elif index == 1:
-                mesh = trimesh.Trimesh(verts, faces, face_colors=[240, 50, 50, 200])
-            else:
-                mesh = trimesh.Trimesh(verts, faces, face_colors=[240, 220, 20, 200])
-        else:
-            mesh = trimesh.Trimesh(verts, faces, face_colors=[20, 50, 200, 180])
-
-        # mesh = trimesh.smoothing.filter_mut_dif_laplacian(mesh)
-        scene.add_geometry(mesh)
-        index += 1
-
-    scene.show()
-
-
-def visualization_method(method, key, other, organs):
-    """
-    Function used in kivy GUI. That's why it has a little bit weird logic and parameters
-    :param method: 'ICP algorithm' or anything else for center point method
-    :param key: a list with a path to the key organ file (usually the plan file)
-    :param other: a list with a path to the organ which is going to be aligned to the key organ
-    :param organs: a list with a path to the other organs which are going to be aligned and visualized
-
-    examples:
-        visualization_method("ICP algorithm", ["OBJ_images/bones_plan.obj"], ["OBJ_images/bones_region_grow.obj"], [])
-        visualization_method("center", ["OBJ_images/prostate_plan.obj"], ["OBJ_images/prostate.obj"],
-                             ["OBJ_images/bones_region_grow.obj", "OBJ_images/bladder.obj"])
-    """
-    key = import_obj(key)
-    other = import_obj(other)
-    organs = import_obj(organs)
-    all_organs = other + organs
-
-    if method == "ICP algorithm":
-        transform_matrix = icp_transformation_matrices(other[0][0], key[0][0])
-        transfr_objects = vertices_transformation(transform_matrix, deepcopy(all_organs))
-        all_organs.extend(transfr_objects)
-        visualize(all_organs, True)
-
-    else:
-        key_center = find_center_point(key[0][0])
-        other_center = find_center_point(other[0][0])
-        matrix = create_translation_matrix(key_center, other_center)
-        centered_objects = list(vertices_transformation(matrix, deepcopy(all_organs)))
-        all_organs.extend(centered_objects)
-        visualize(all_organs, True)
-
-
-# for simple example of bones icp aligning call:
-# objects = import_obj(["OBJ_images/bones_region_grow.obj", "OBJ_images/bladder.obj",
-#                       "OBJ_images/prostate.obj", "OBJ_images/rectum.obj"])
-# plan = import_obj(["OBJ_images/bones_plan.obj", "OBJ_images/prostate_plan.obj"])
-
-
-# icp_transformation_matrices takes as arguments only vertices, so when we want to transform for example bladder.obj,
-# we write objects[1][0] as the second index [0] means vertices
-# transform_matrix, transformed = icp_transformation_matrices(objects[0][0], plan[0][0])
-
-# make copy of the objects because we want to save the unmodified version too
-# transfr_objects = vertices_transformation(transform_matrix, deepcopy([objects[0]]))
-#
-# BEFORE aligning:
-# visualize([plan[0], objects[0]], True)
-# AFTER aligning:
-# visualize([plan[0], transfr_objects[0]], True)
-
-
-def write_center_movements():
+def write_center_movements(plan):
     """
     Function to write translation matrix between plan prostate center and prostates centres in different timestamps
     in a file
@@ -215,7 +152,7 @@ def write_center_movements():
             file.write("x: {}, y: {}, z: {}\n".format(translation_m[0], translation_m[1], translation_m[2]))
 
 
-def write_icp_movements():
+def write_icp_movements(plan):
     """
     Function that writes to two files translation and rotation matrices between plan bones and bones in different
     timestamps
@@ -225,7 +162,7 @@ def write_icp_movements():
         transform_matrix = icp_transformation_matrices(bones[0][0], plan[0][0], True)
 
 
-def write_icp_center_movements():
+def write_icp_center_movements(plan):
     """
     Function that writes translation matrices to a file. They are computed by applying transformation matrix between
     plan bones and bones in different timestamps to prostates. Then there is computed a translation matrix between
@@ -247,7 +184,7 @@ def write_icp_center_movements():
             file.write("x: {}, y: {}, z: {}\n".format(translation_m[0], translation_m[1], translation_m[2]))
 
 
-def compute_prostate_center_distances():
+def compute_prostate_center_distances(plan):
     """
     Computes distances between plan prostate center and prostate centers in different timestamps
     :return: list of distances
@@ -268,9 +205,9 @@ def compute_distances_after_icp_centroid(patient):
     icp transformation matrix computed from plan bones and bones in different timestamps
     :return: 2d list of distances in order: prostate, bladder, rectum
     """
-    plan_prostate_center = trimesh.load_mesh(FILEPATH + "{}\\prostate\\prostate_plan.obj".format(patient)).centroid
-    plan_bladder_center = trimesh.load_mesh(FILEPATH + "{}\\bladder\\bladder_plan.obj".format(patient)).centroid
-    plan_rectum_center = trimesh.load_mesh(FILEPATH + "{}\\rectum\\rectum_plan.obj".format(patient)).centroid
+    plan_prostate_center = find_center_of_mass(trimesh.load_mesh(FILEPATH + "{}\\prostate\\prostate_plan.obj".format(patient)).vertices)
+    plan_bladder_center = find_center_of_mass(trimesh.load_mesh(FILEPATH + "{}\\bladder\\bladder_plan.obj".format(patient)).vertices)
+    plan_rectum_center = find_center_of_mass(trimesh.load_mesh(FILEPATH + "{}\\rectum\\rectum_plan.obj".format(patient)).vertices)
 
     distances = [[], [], []]
     plan_bone = import_obj([FILEPATH + "{}\\bones\\bones_plan.obj".format(patient)])
@@ -280,16 +217,43 @@ def compute_distances_after_icp_centroid(patient):
         bone = import_obj([FILEPATH + "{}\\bones\\bones{}.obj".format(patient, i)])
         transform_matrix = icp_transformation_matrices(bone[0][0], plan_bone[0][0])
 
-        prostate = numpy.array(trimesh.load_mesh(FILEPATH + "{}\\prostate\\prostate{}.obj".format(patient, i)).centroid)
-        bladder = numpy.array(trimesh.load_mesh(FILEPATH + "{}\\bladder\\bladder{}.obj".format(patient, i)).centroid)
-        rectum = numpy.array(trimesh.load_mesh(FILEPATH + "{}\\rectum\\rectum{}.obj".format(patient, i)).centroid)
+        prostate = numpy.array(find_center_of_mass(trimesh.load_mesh(FILEPATH + "{}\\prostate\\prostate{}.obj".format(patient, i)).vertices))
+        bladder = numpy.array(find_center_of_mass(trimesh.load_mesh(FILEPATH + "{}\\bladder\\bladder{}.obj".format(patient, i)).vertices))
+        rectum = numpy.array(find_center_of_mass(trimesh.load_mesh(FILEPATH + "{}\\rectum\\rectum{}.obj".format(patient, i)).vertices))
         organs = [prostate, bladder, rectum]
 
         for i in range(3):
             transf_organ_center = vertices_transformation(transform_matrix, [[[organs[i]]]])
             distances[i].append(numpy.linalg.norm(keys[i] - numpy.array(transf_organ_center)))
 
-    return distances, movement_vectors
+    return distances
+
+
+def compute_distances_after_centering_centroid(patient):
+    plan_prostate_center = find_center_of_mass(trimesh.load_mesh(FILEPATH + "{}\\prostate\\prostate_plan.obj".format(patient)).vertices)
+    plan_bladder_center = find_center_of_mass(trimesh.load_mesh(FILEPATH + "{}\\bladder\\bladder_plan.obj".format(patient)).vertices)
+    plan_rectum_center = find_center_of_mass(trimesh.load_mesh(FILEPATH + "{}\\rectum\\rectum_plan.obj".format(patient)).vertices)
+    plan_bones_center = find_center_of_mass(trimesh.load_mesh(FILEPATH + "{}\\bones\\bones_plan.obj".format(patient)).vertices)
+
+    # movement vectors or distances
+    distances, movement_vectors = [[], [], []], [[], [], []]
+    keys = [numpy.array(plan_bones_center), numpy.array(plan_bladder_center), numpy.array(plan_rectum_center)]
+
+    for i in range(1, 14):
+        prostate = numpy.array(find_center_of_mass(trimesh.load_mesh(FILEPATH + "{}\\prostate\\prostate{}.obj".format(patient, i)).vertices))
+        bladder = numpy.array(find_center_of_mass(trimesh.load_mesh(FILEPATH + "{}\\bladder\\bladder{}.obj".format(patient, i)).vertices))
+        rectum = numpy.array(find_center_of_mass(trimesh.load_mesh(FILEPATH + "{}\\rectum\\rectum{}.obj".format(patient, i)).vertices))
+        bones = numpy.array(find_center_of_mass(trimesh.load_mesh(FILEPATH + "{}\\bones\\bones{}.obj".format(patient, i)).vertices))
+
+        organs = [bones, bladder, rectum]
+        transform_matrix = create_translation_matrix(plan_prostate_center, prostate)
+
+        for i in range(3):
+            transf_organ_center = vertices_transformation(transform_matrix, [[[organs[i]]]])
+            distances[i].append(numpy.linalg.norm(keys[i] - numpy.array(transf_organ_center)))
+            # movement_vectors[i].append((np.ravel(keys[i] - numpy.array(transf_organ_center))).tolist())
+
+    return distances
 
 
 def compute_distances_after_icp(patient):
@@ -362,7 +326,7 @@ def compute_distances_after_centering(patient):
 def timer():
     """Used just for deciding which functions are faster"""
     start = time.time()
-    compute_distances_after_centering_old("146")
+    compute_distances_after_centering("146")
     end = time.time()
     print(end - start)
 

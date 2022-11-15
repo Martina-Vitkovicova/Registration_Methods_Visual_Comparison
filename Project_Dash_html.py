@@ -3,7 +3,6 @@ import constants
 
 TIMESTAMPS = ["plan"] + list(range(1, 14))
 
-
 layout = html.Div(className="row", children=[
     html.Div(className="row", children=[
 
@@ -43,12 +42,13 @@ layout = html.Div(className="row", children=[
         first cell in line with number 722, all graphs in the individual patient section will show the patient number 
         722 instead of the number 137 displayed by default.""",
                 style={"margin-left": "40px", "margin-right": "40px", "margin-top": "10px", "margin-bottom": "10px",
-                       "color": "#081e5e", "font-size": "15pt", "background-color": constants.LIGHT_GREY, "border-radius": "5px",
+                       "color": "#081e5e", "font-size": "15pt", "background-color": constants.LIGHT_GREY,
+                       "border-radius": "5px",
                        "padding": "10px 30px 10px 30px"}),
 
         html.H6("Patients overview section", style={"margin": "20px 40px 20px 40px", "color": "#171717", "font-size":
             "20pt", "font-family": "Bahnschrift", 'font-weight': 'bold',
-                                                    "background-color": "#C7C7C7", "border-radius": "5px",
+                                                    "background-color": constants.LIGHT_GREEN, "border-radius": "5px",
                                                     "padding": "10px 0px 10px 0px", "text-align": "center"}),
 
         # AVERAGES ------------------------------------------------------------------------------------------
@@ -94,7 +94,7 @@ layout = html.Div(className="row", children=[
         html.H6("Individual patient section",
                 style={"margin": "20px 40px 20px 40px", "color": "#171717",
                        "font-family": "Bahnschrift", 'font-weight': 'bold',
-                       "background-color": "#C7C7C7", "border-radius": "5px",
+                       "background-color": constants.LIGHT_GREEN, "border-radius": "5px",
                        "padding": "10px 0px 10px 0px", "text-align": "center", "font-size": "20pt"}),
 
         # ORGANS ICP ---------------------------------------------------------------------------------------------
@@ -112,7 +112,9 @@ layout = html.Div(className="row", children=[
                        style={'display': 'inline-block', "font-size": "18px"})]),
 
     html.Div(className="row", children=[
+        # html.Div(id="organs-icp", style={'display': 'inline-block'}),
         dcc.Graph(id="organs-icp", style={'display': 'inline-block', "padding": "20px 40px 20px 40px"}),
+        # config={"modeBarButtonsToRemove": ["resetScale2d"]}),
 
         # ORGANS CENTER -----------------------------------------------------------------------------------------
 
@@ -143,7 +145,7 @@ layout = html.Div(className="row", children=[
     html.H6("Timestamp section",
             style={"margin": "20px 40px 20px 40px", "color": "#171717",
                    "font-family": "Bahnschrift", 'font-weight': 'bold',
-                   "background-color": "#C7C7C7", "border-radius": "5px",
+                   "background-color": constants.LIGHT_GREEN, "border-radius": "5px",
                    "padding": "10px 0px 10px 0px", "text-align": "center", "font-size": "20pt"}),
 
     # 3D GRAPH --------------------------------------------------------------------------------------------------
@@ -153,10 +155,10 @@ layout = html.Div(className="row", children=[
             html.H6("""In the 3D chart are depicted organs loaded from patients' anatomy scans. It has two modes, 
             the first showing the organs and the bones from the plan CT scans and in the second mode, one can select 
             two different scans, the alignment method and then compare the results. In both modes, rendering only 
-            some organs and bones is possible.  
-            The last group of graphs represents organs selected in the 3D graph 
-            but in the 2D slices along the main anatomical planes. There are three sliders that can be used to move 
-            the imaged slice in the direction of the given axis.""",
+            some organs and bones is possible. The last group of graphs represents organs selected in the 3D graph 
+            but in the 2D slices along the main anatomical planes, and a rotation axes graph. There are three sliders 
+            that can be used to move the imaged slice in the direction of the given axis. The rotation graph shows 
+            the angles in which the organs selected in the second timestamp rotated after the ICP alignment.""",
                     style={"margin-left": "40px", "margin-right": "40px", "color": "#081e5e",
                            "background-color": constants.LIGHT_GREY, "border-radius": "5px",
                            "padding": "20px 20px 20px 20px"})]),
@@ -202,17 +204,17 @@ layout = html.Div(className="row", children=[
                 dcc.Graph(id="rotations-axes", style={"padding": "45px 0px 0px 0px"}),
 
                 html.Div(style={"padding": "7px 0px 0px 0px"}, children=[
-                    # html.H6("X axes slice:", id="x-slice-header"),
+                    # html.H6("X axis slice:", id="x-slice-header"),
                     dcc.Slider(min=0, max=1, value=0.5, id="x-slice-slider", marks=None),
                     dcc.Graph(id="x-slice-graph")]),
 
                 html.Div(style={"padding": "20px 0px 50px 0px"}, children=[
-                    # html.H6("Y axes slice:"),
+                    # html.H6("Y axis slice:"),
                     dcc.Slider(min=0, max=1, value=0.5, id="y-slice-slider", marks=None),
                     dcc.Graph(id="y-slice-graph")]),
 
                 html.Div(style={"padding": "20px 0px 50px 0px"}, children=[
-                    # html.H6("Z axes slice:"),
+                    # html.H6("Z axis slice:"),
                     dcc.Slider(min=0, max=1, value=0.5, id="z-slice-slider", marks=None),
                     dcc.Graph(id="z-slice-graph")])
             ])

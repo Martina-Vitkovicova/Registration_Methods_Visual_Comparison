@@ -31,6 +31,30 @@ def write_computations(distances, movements, averages, icp):
         json.dump(all_mov, mov_f)
 
 
+def write_computations_centroid(distances, averages, icp):
+    with open(distances, "w") as dist_f, open(averages, "w") as avrg_f:
+        all_dist = []
+        for pat in constants.PATIENTS:
+            print(pat)
+            if icp:
+                dist = Project_2.compute_distances_after_icp_centroid(pat)
+            else:
+                dist = Project_2.compute_distances_after_centering_centroid(pat)
+
+            prostate_bones, bladder, rectum = Project_2.compute_average_distances(dist)
+
+            all_dist.append(dist)
+
+            print(prostate_bones, file=avrg_f)
+            print(bladder, file=avrg_f)
+            print(rectum, file=avrg_f)
+
+        json.dump(all_dist, dist_f)
+
+
+# write_computations_centroid("icp_distances_c.txt", "icp_averages_c.txt", True)
+# write_computations_centroid("center_distances_c.txt", "center_averages_c.txt", False)
+
 # write_computations("icp_distances.txt", "icp_movements.txt", "icp_averages.txt", True)
 # write_computations("center_distances.txt", "center_movements.txt", "center_averages.txt", False)
 
@@ -61,7 +85,6 @@ def write_rotation_file():
             patient_rot = []
             for i in range(1, 14):
                 bones = Project_2.import_obj([constants.FILEPATH + "{}\\bones\\bones{}.obj".format(pat, i)])
-
                 matrix, transformed, _ = trimesh.registration.icp(bones[0][0], plan_bones[0][0], scale=False)
                 rotation_m = numpy.array([matrix[0][:3], matrix[1][:3], matrix[2][:3]])
 
