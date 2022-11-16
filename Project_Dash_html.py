@@ -113,12 +113,12 @@ layout = html.Div(className="row", children=[
 
     html.Div(className="row", children=[
         # html.Div(id="organs-icp", style={'display': 'inline-block'}),
-        dcc.Graph(id="organs-icp", style={'display': 'inline-block', "padding": "20px 40px 20px 40px"}),
+        dcc.Graph(id="organ-distances", style={'display': 'inline-block', "padding": "20px 40px 20px 40px"}),
         # config={"modeBarButtonsToRemove": ["resetScale2d"]}),
 
         # ORGANS CENTER -----------------------------------------------------------------------------------------
 
-        dcc.Graph(id="organs-center", style={'display': 'inline-block', "padding": "20px 10px 20px 20px"}),
+        # dcc.Graph(id="organs-center", style={'display': 'inline-block', "padding": "20px 10px 20px 20px"}),
 
         # DIFFERENCES GRAPH -----------------------------------------------------------------------------------------
 

@@ -4,7 +4,7 @@ PATIENTS = ["137", "146", "148", "198", "489", "579", "716", "722"]
 TIMESTAMPS = list(range(1, 14))
 scale = {"137": 39, "146": 73, "148": 55, "198": 79, "489": 92, "579": 28, "716": 85, "722": 57}
 
-LIGHT_BLUE = "#057DAD"  # blue
+LIGHT_BLUE = "#008698"  # blue
 PURPLE = "#4D5FEB"  # purple
 GREEN = "#94D2FF"  # orange
 RED = "#439FFF"  # pink
