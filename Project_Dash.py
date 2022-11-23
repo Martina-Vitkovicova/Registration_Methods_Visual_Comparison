@@ -269,7 +269,7 @@ def decide_3d_graph_mode(mode, fig, method, organs, fst_timestamp, snd_timestamp
         fst_timestamp = "plan organs" if "_plan" == fst_timestamp else "timestamp number {}".format(fst_timestamp)
         snd_timestamp = "plan organs" if "_plan" == snd_timestamp else "timestamp number {}".format(snd_timestamp)
 
-        fig.update_layout(title_text="Patient {}, {} (pink) and {} (purplw)"
+        fig.update_layout(title_text="Patient {}, {} (pink) and {} (purple)"
                           .format(patient_id, fst_timestamp, snd_timestamp), title_x=0.5, title_y=0.95)
 
     else:
@@ -1106,7 +1106,7 @@ def create_heatmap_centering(click_data, icp_click_data, differences, average_di
                      zeroline=False, showgrid=False, range=[-0.55, 51.55])
     fig.update_yaxes(title_text="Patient", ticktext=PATIENTS, tickmode="array", tickvals=np.arange(0, 8, 1),
                      zeroline=False, showgrid=False)
-    fig.update_layout(title_x=0.5, font=dict(size=16), title_y=0.90, legend={"x": 0.73, "y": 1.12, "orientation": "h",
+    fig.update_layout(title_x=0.5, font=dict(size=16), title_y=0.90, legend={"x": 0.73, "y": 1.14, "orientation": "h",
                                                                              "xanchor": "left"})
     return fig
 
