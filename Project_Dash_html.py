@@ -66,9 +66,9 @@ layout = html.Div(className="row", children=[
             dcc.RadioItems(options=["uniform", "individual"], value="uniform", inline=True, id="scale-average",
                            style={'display': 'inline-block', "font-size": "18px"})]),
 
-        dcc.Graph(id="average-icp", style={'display': 'inline-block', "padding": "20px 40px 20px 40px"}),
-
-        dcc.Graph(id="average-center", style={'display': 'inline-block', "padding": "20px 10px 20px 20px"}),
+        html.Div(style={'textAlign': 'center'}, children=[
+            dcc.Graph(id="average-distances", style={'display': 'inline-block', "width": "95%",
+                                                     "padding": "20px 0px 20px 0px"})]),
 
         # HEATMAPS ---------------------------------------------------------------------------------------------------
 
@@ -86,10 +86,12 @@ layout = html.Div(className="row", children=[
             dcc.RadioItems(options=["uniform", "individual"], value="uniform", inline=True, id="scale-heatmap",
                            style={'display': 'inline-block', "font-size": "18px"})]),
 
-        dcc.Graph(id="heatmap-icp", style={'display': 'inline-block', "padding": "20px 30px 0px 40px"}),
-
-        dcc.Graph(id="heatmap-center",
-                  style={'display': 'inline-block', "padding": "20px 0px 10px 40px"}),
+        html.Div(style={'textAlign': 'center'}, children=[
+            dcc.Graph(id="heatmap-icp", style={'display': 'inline-block', "padding": "20px 0px 10px 0px",
+                                               "width": "95%"})]),
+        html.Div(style={'textAlign': 'center'}, children=[
+            dcc.Graph(id="heatmap-center",
+                      style={'display': 'inline-block', "padding": "0px 0px 20px 0px", "width": "95%"})]),
 
         html.H6("Individual patient section",
                 style={"margin": "20px 40px 20px 40px", "color": "#171717",
@@ -97,7 +99,7 @@ layout = html.Div(className="row", children=[
                        "background-color": constants.LIGHT_GREEN, "border-radius": "5px",
                        "padding": "10px 0px 10px 0px", "text-align": "center", "font-size": "20pt"}),
 
-        # ORGANS ICP ---------------------------------------------------------------------------------------------
+        # ORGANS DISTANCES --------------------------------------------------------------------------------------------
 
         html.H6("""The following charts depict only the organs and bones of one 
         patient during the treatment period - 13 appointments. By clicking on the traces in the legend, 
@@ -112,13 +114,10 @@ layout = html.Div(className="row", children=[
                        style={'display': 'inline-block', "font-size": "18px"})]),
 
     html.Div(className="row", children=[
-        # html.Div(id="organs-icp", style={'display': 'inline-block'}),
-        dcc.Graph(id="organ-distances", style={'display': 'inline-block', "padding": "20px 40px 20px 40px"}),
-        # config={"modeBarButtonsToRemove": ["resetScale2d"]}),
+        html.Div(style={'textAlign': 'center'}, children=[
+            dcc.Graph(id="organ-distances", style={'display': 'inline-block', "padding": "20px 40px 20px 40px",
+                                                   "width": "95%"})]),
 
-        # ORGANS CENTER -----------------------------------------------------------------------------------------
-
-        # dcc.Graph(id="organs-center", style={'display': 'inline-block', "padding": "20px 10px 20px 20px"}),
 
         # DIFFERENCES GRAPH -----------------------------------------------------------------------------------------
 
@@ -129,9 +128,9 @@ layout = html.Div(className="row", children=[
                        "background-color": constants.LIGHT_GREY, "border-radius": "5px",
                        "padding": "10px 30px 10px 30px"}),
 
-        html.Div(className="row", children=[
+        html.Div(className="row", style={'textAlign': 'center'}, children=[
             dcc.Graph(id="alignment-differences",
-                      style={"padding": "20px 0px 30px 40px", 'display': 'inline-block'})])]),
+                      style={"padding": "20px 40px 30px 40px", 'display': 'inline-block', "width": "95%"})])]),
 
     # ROTATIONS GRAPH -----------------------------------------------------------------------------------------------
     html.H6("""This graph depicts how the organs in a given time rotated in relation to the organs in the plan 
@@ -140,7 +139,8 @@ layout = html.Div(className="row", children=[
                    "background-color": constants.LIGHT_GREY, "border-radius": "5px",
                    "padding": "10px 30px 10px 30px"}),
 
-    dcc.Graph(id="rotations-graph", style={"padding": "20px 30px 10px 40px"}),
+    html.Div(className="row", style={'textAlign': 'center'}, children=[
+        dcc.Graph(id="rotations-graph", style={"padding": "20px 40px 10px 40px", "width": "95%"})]),
 
     html.H6("Timestamp section",
             style={"margin": "20px 40px 20px 40px", "color": "#171717",
@@ -201,20 +201,17 @@ layout = html.Div(className="row", children=[
                                                      "justify-content": "space-evenly",
                                                      "margin": "20px 0px 0px 45px"}, children=[
 
-                dcc.Graph(id="rotations-axes", style={"padding": "45px 0px 0px 0px"}),
+                dcc.Graph(id="rotations-axes"),
 
-                html.Div(style={"padding": "7px 0px 0px 0px"}, children=[
-                    # html.H6("X axis slice:", id="x-slice-header"),
+                html.Div(id="x-slice", children=[
                     dcc.Slider(min=0, max=1, value=0.5, id="x-slice-slider", marks=None),
                     dcc.Graph(id="x-slice-graph")]),
 
                 html.Div(style={"padding": "20px 0px 50px 0px"}, children=[
-                    # html.H6("Y axis slice:"),
                     dcc.Slider(min=0, max=1, value=0.5, id="y-slice-slider", marks=None),
                     dcc.Graph(id="y-slice-graph")]),
 
                 html.Div(style={"padding": "20px 0px 50px 0px"}, children=[
-                    # html.H6("Z axis slice:"),
                     dcc.Slider(min=0, max=1, value=0.5, id="z-slice-slider", marks=None),
                     dcc.Graph(id="z-slice-graph")])
             ])

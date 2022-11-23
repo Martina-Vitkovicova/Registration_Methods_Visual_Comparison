@@ -8,29 +8,6 @@ import json
 import constants
 
 
-def write_computations(distances, movements, averages, icp):
-    with open(distances, "w") as dist_f, open(movements, "w") as mov_f, open(averages, "w") as avrg_f:
-        all_dist, all_mov = [], []
-        for pat in constants.PATIENTS:
-            print(pat)
-            if icp:
-                dist, mov = Project_2.compute_distances_after_icp(pat)
-            else:
-                dist, mov = Project_2.compute_distances_after_centering(pat)
-
-            prostate_bones, bladder, rectum = Project_2.compute_average_distances(dist)
-
-            all_dist.append(dist)
-            all_mov.append(mov)
-
-            print(prostate_bones, file=avrg_f)
-            print(bladder, file=avrg_f)
-            print(rectum, file=avrg_f)
-
-        json.dump(all_dist, dist_f)
-        json.dump(all_mov, mov_f)
-
-
 def write_computations_centroid(distances, averages, icp):
     with open(distances, "w") as dist_f, open(averages, "w") as avrg_f:
         all_dist = []
@@ -68,7 +45,7 @@ def write_plan_center_points():
         for pat in constants.PATIENTS:
             cent_p = []
             for organ in ["bones", "prostate", "bladder", "rectum"]:
-                x1, y1, z1 = Project_2.find_center_point([], trimesh.load_mesh(
+                x1, y1, z1 = Project_2.find_center_of_mass(trimesh.load_mesh(
                     constants.FILEPATH + "{}\\{}\\{}_plan.obj".format(pat, organ, organ)).bounds)
 
                 cent_p.append((x1, y1, z1))
