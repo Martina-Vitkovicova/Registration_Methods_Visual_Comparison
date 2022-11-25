@@ -1,6 +1,6 @@
 from copy import deepcopy
 import trimesh
-from dash import Dash, Output, Input, callback_context
+from dash import Dash, Output, Input, callback_context, ctx
 import numpy as np
 import plotly.graph_objects as go
 import Project_2
@@ -18,7 +18,8 @@ app.layout = Project_Dash_html.layout
 
 patient_id = "137"
 timestamp_i = 0  # one lower than actual timestamp because used as index
-camera_g = dict(up=dict(x=0, y=0, z=1), center=dict(x=0, y=0, z=0), eye=dict(x=0.5, y=-2, z=0))
+organ = "Prostate"
+# camera_g = dict(up=dict(x=0, y=0, z=1), center=dict(x=0, y=0, z=0), eye=dict(x=0.5, y=-2, z=0))
 
 with open("computations_files/icp_distances_c.txt", "r") as icp_dist, \
         open("computations_files/icp_averages_c.txt", "r") as icp_avrg:
@@ -98,7 +99,7 @@ def options_visibility(mode):
                {'display': 'inline-block', "width": "60px",
                 "height": "30px", "font-size": "16px", "padding": "0px 0px 0px 30px"}, \
                {"padding": "20px 0px 0px 45x", "display": "inline-block",
-                "margin": "20px 0px 20px 45px", "height": "550px"}, {"padding": "137px 0px 0px 0px"},\
+                "margin": "20px 0px 20px 45px", "height": "550px"}, {"padding": "137px 0px 0px 0px"}, \
                {"padding": "99px 0px 0px 0px"}
 
     else:
@@ -106,434 +107,6 @@ def options_visibility(mode):
                {'display': 'none'}, {"padding": "20px 0px 0px 45x", "display": "inline-block",
                                      "margin": "14px 0px 20px 45px", "height": "562px"}, \
                {"padding": "50px 0px 0px 0px"}, {"padding": "12px 0px 0px 0px"}
-
-
-@app.callback(
-    Output("rotations-axes", "figure"),
-    Input("heatmap-icp", "clickData"),
-    Input("heatmap-center", "clickData"),
-    Input("average-distances", "clickData"),
-    Input("alignment-radioitems", "value"),
-    Input("mode-radioitems", "value"),
-    Input("fst-timestamp-dropdown", "value"))
-def create_3d_angle(heatmap_icp, heatmap_center, average_distances, method, mode, fst_timestamp):
-    layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)', showlegend=False,
-                       plot_bgcolor='rgba(50,50,50,1)', margin=dict(l=10, r=10, t=10, b=10), height=280, width=320)
-    fig = go.Figure(layout=layout)
-    camera = dict(up=dict(x=0, y=0, z=1), center=dict(x=0, y=0, z=0), eye=dict(x=1.1, y=0.4, z=0.4))
-    annot = []
-    steps = 50
-    cone_tip = 7
-    size = 12
-
-    create_rotation_axes(fig, annot)
-    t = np.linspace(0, 10, steps)
-    x, y, z = 20, np.cos(t) * size, np.sin(t) * size
-
-    if "ICP" in method and "Two" in mode and fst_timestamp == "plan":
-        text_x = str(round(rotations[PATIENTS.index(patient_id)][0][0][timestamp_i], 2)) + "°"
-        text_y = str(round(rotations[PATIENTS.index(patient_id)][0][1][timestamp_i], 2)) + "°"
-        text_z = str(round(rotations[PATIENTS.index(patient_id)][0][2][timestamp_i], 2)) + "°"
-    else:
-        text_x, text_y, text_z = "0°", "0°", "0°"
-
-    fig.add_trace(go.Scatter3d(mode="lines", x=[x] * 25, y=y, z=z, line=dict(width=5, color=CYAN1),
-                               hoverinfo='none'))
-    fig.add_trace(go.Cone(x=[x], y=[y[0]], z=[z[0]], u=[0], v=[cone_tip * (y[0] - y[1])], w=[cone_tip * (z[0] - z[1])],
-                          showlegend=False, showscale=False, colorscale=[[0, CYAN1], [1, CYAN1]],
-                          hoverinfo='none'))
-    annot.append(dict(showarrow=False, text=text_x, x=25, y=-25, z=0, font=dict(color=CYAN1, size=15)))
-
-    x, y, z = np.cos(t) * size, 20, np.sin(t) * size
-    fig.add_trace(go.Scatter3d(mode="lines", x=x, y=[y] * 25, z=z, line=dict(width=5, color=CYAN2), hoverinfo='none'))
-    fig.add_trace(go.Cone(x=[x[0]], y=[y], z=[z[0]], u=[cone_tip * (x[0] - x[1])], v=[0], w=[cone_tip * (z[0] - z[1])],
-                          showlegend=False, showscale=False, colorscale=[[0, CYAN2], [1, CYAN2]], hoverinfo='none'))
-    annot.append(dict(showarrow=False, text=text_y, x=5, y=35, z=15, font=dict(color=CYAN2, size=15)))
-
-    x, y, z = np.cos(t) * size, np.sin(t) * size, 20
-    fig.add_trace(go.Scatter3d(mode="lines", x=x, y=y, z=[z] * 25, line=dict(width=5, color=CYAN3),
-                               hoverinfo='none'))
-    fig.add_trace(go.Cone(x=[x[0]], y=[y[0]], z=[z], u=[cone_tip * (x[0] - x[1])], v=[cone_tip * (y[0] - y[1])],
-                          w=[0], showlegend=False, showscale=False, colorscale=[[0, CYAN3], [1, CYAN3]],
-                          hoverinfo='none'))
-    annot.append(dict(showarrow=False, text=text_z, x=10, y=-10, z=z + 10, font=dict(color=CYAN3, size=15)))
-
-    fig.update_layout(scene=dict(annotations=annot, camera=camera))
-
-    return fig
-
-
-def create_rotation_axes(fig, annot):
-    cone_tip = 12
-    fig.add_trace(go.Scatter3d(x=[-70, 50], y=[0, 0], z=[0, 0], mode='lines', hoverinfo='skip',
-                               line=dict(color=CYAN1, width=7)))
-    fig.add_trace(go.Cone(x=[50], y=[0], z=[0], u=[cone_tip * (50 - 48)], v=[0], w=[0], hoverinfo='none',
-                          showlegend=False, showscale=False, colorscale=[[0, CYAN1], [1, CYAN1]]))
-
-    fig.add_trace(go.Scatter3d(x=[0, 0], y=[-70, 50], z=[0, 0], mode='lines', hoverinfo='skip',
-                               line=dict(color=CYAN2, width=7)))
-    fig.add_trace(go.Cone(x=[0], y=[50], z=[0], u=[0], v=[cone_tip * (50 - 48)], w=[0], hoverinfo='none',
-                          showlegend=False, showscale=False, colorscale=[[0, CYAN2], [1, CYAN2]]))
-
-    fig.add_trace(go.Scatter3d(x=[0, 0], y=[0, 0], z=[-50, 50], mode='lines', hoverinfo='skip',
-                               line=dict(color=CYAN3, width=7)))
-    fig.add_trace(go.Cone(x=[0], y=[0], z=[50], u=[0], v=[0], w=[cone_tip * (50 - 48)], hoverinfo='none',
-                          showlegend=False, showscale=False, colorscale=[[0, CYAN3], [1, CYAN3]]))
-
-    annot.append(dict(showarrow=False, text="X", x=65, y=0, z=0, font=dict(color=CYAN1, size=16)))
-    annot.append(dict(showarrow=False, text="Y", x=0, y=65, z=0, font=dict(color=CYAN2, size=16)))
-    annot.append(dict(showarrow=False, text="Z", x=0, y=0, z=65, font=dict(color=CYAN3, size=16)))
-
-    fig.update_layout(scene=dict(xaxis=dict(backgroundcolor=constants.GREY2, gridcolor=constants.LIGHT_GREY2),
-                                 yaxis=dict(backgroundcolor=constants.GREY2, gridcolor=constants.LIGHT_GREY2),
-                                 zaxis=dict(backgroundcolor=constants.GREY2, gridcolor=constants.LIGHT_GREY2)))
-
-
-@app.callback(
-    Output("main-graph", "figure"),
-    Input("alignment-radioitems", "value"),
-    Input("organs-checklist", "value"),
-    Input("mode-radioitems", "value"),
-    Input("fst-timestamp-dropdown", "value"),
-    Input("snd-timestamp-dropdown", "value"),
-    Input("heatmap-icp", "clickData"),
-    Input("heatmap-center", "clickData"),
-    Input("average-distances", "clickData"))
-def create_3dgraph(method, organs, mode, fst_timestamp, snd_timestamp, heatmap_icp, heatmap_center, average_distances):
-    """
-    Creates the 3D figure and visualises it. The last four arguments are just for updating the graph.
-    :param method: ICP or prostate aligning registration method
-    :param organs: organs selected by the user
-    :param mode: showing either Plan organs or organ in the Two timestamps
-    :param mov: showing either all of the movement vectors, only yhe average ones or none
-    :return: the 3d figure
-    """
-    global patient_id
-    global camera_g
-
-    fst_timestamp = "_plan" if fst_timestamp == "plan" else fst_timestamp
-    snd_timestamp = "_plan" if snd_timestamp == "plan" else snd_timestamp
-
-    objects_fst = import_selected_organs(organs, fst_timestamp, patient_id)
-    objects_snd = import_selected_organs(organs, snd_timestamp, patient_id)
-
-    camera = dict(up=dict(x=0, y=0, z=1), center=dict(x=0, y=0, z=0), eye=dict(x=0.5, y=-2, z=0))
-    layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)', uirevision=patient_id,
-                       plot_bgcolor='rgba(50,50,50,1)', margin=dict(l=40, r=40, t=60, b=40), showlegend=True)
-    fig = go.Figure(layout=layout)
-    fig.update_layout(scene_camera=camera, scene=dict(xaxis_title='x [mm]', yaxis_title='y [mm]', zaxis_title='z [mm]'))
-
-    fst_meshes, snd_meshes = \
-        decide_3d_graph_mode(mode, fig, method, organs, fst_timestamp, snd_timestamp, objects_fst, objects_snd)
-
-    for meshes in [fst_meshes, snd_meshes]:
-        for mesh in meshes:
-            mesh.update(cmin=-7, lightposition=dict(x=100, y=200, z=0),
-                        lighting=dict(ambient=0.4, diffuse=1, fresnel=0.1, specular=1, roughness=0.5,
-                                      facenormalsepsilon=1e-15, vertexnormalsepsilon=1e-15))
-            fig.add_trace(mesh)
-
-    return fig
-
-
-def import_selected_organs(organs, time_or_plan, patient):
-    """
-    Imports selected organs as .obj files.
-    :param organs: selected organs
-    :param time_or_plan: chosen timestamp or _plan suffix
-    :param patient: id of the patient
-    :return: imported objs
-    """
-    objects = []
-    for organ in organs:
-        objects.extend(Project_2.import_obj([FILEPATH + "{}\\{}\\{}{}.obj"
-                                            .format(patient, organ.lower(), organ.lower(), time_or_plan)]))
-    return objects
-
-
-def decide_3d_graph_mode(mode, fig, method, organs, fst_timestamp, snd_timestamp, objects_fst, objects_snd):
-    """
-    Helper function to perform commands according to the chosen mode
-    :param method: ICP or prostate aligning registration method
-    :param organs: organs selected by the user
-    :param mode: showing either Plan organs or organ in the Two timestamps
-    :param mov: showing either all of the movement vectors, only yhe average ones or none
-    :return: created meshes
-    """
-    fst_meshes, snd_meshes = [], []
-
-    if "Two timestamps" in mode:
-        fst_meshes, snd_meshes, center1_after, center2_after = \
-            two_timestamps_mode(method, fst_timestamp, snd_timestamp, objects_fst, objects_snd)
-
-        fst_timestamp = "plan organs" if "_plan" == fst_timestamp else "timestamp number {}".format(fst_timestamp)
-        snd_timestamp = "plan organs" if "_plan" == snd_timestamp else "timestamp number {}".format(snd_timestamp)
-
-        fig.update_layout(title_text="Patient {}, {} (pink) and {} (purple)"
-                          .format(patient_id, fst_timestamp, snd_timestamp), title_x=0.5, title_y=0.95)
-
-    else:
-        objects = import_selected_organs(organs, "_plan", patient_id)
-        fst_meshes = create_meshes_from_objs(objects, PINK)
-        fig.update_layout(title_text="Plan organs of patient {}".format(patient_id), title_x=0.5, title_y=0.95)
-
-    return fst_meshes, snd_meshes
-
-
-def two_timestamps_mode(method, fst_timestamp, snd_timestamp, objects_fst, objects_snd):
-    """
-    Helper to get the chosen meshes and align them according to the selected method. Compute the center of the meshes.
-    :param method: ICP or prostate centering
-    :param fst_timestamp: number of the first selected timestamp
-    :param snd_timestamp:number of the second selected timestamp
-    :param objects_fst: objects imported in the time of the first timestamp
-    :param objects_snd: objects imported in the time of the second timestamp
-    :return: aligned meshes and center of the moved organs
-    """
-    fst_meshes, snd_meshes = [], []
-    if "ICP" in method:
-        meshes, center1_before, center1_after = get_meshes_after_icp(fst_timestamp, objects_fst, patient_id)
-        fst_meshes.extend(meshes)
-        meshes, center2_before, center2_after = get_meshes_after_icp(snd_timestamp, objects_snd, patient_id, ORANGE)
-        snd_meshes.extend(meshes)
-
-    else:
-        meshes, center1_before, center1_after = get_meshes_after_centering(fst_timestamp, objects_fst, patient_id, PINK)
-        fst_meshes.extend(meshes)
-        meshes, center2_before, center2_after = get_meshes_after_centering(snd_timestamp, objects_snd, patient_id)
-        snd_meshes.extend(meshes)
-
-    return fst_meshes, snd_meshes, center1_after, center2_after
-
-
-def get_meshes_after_icp(timestamp, objects, patient, color=PINK):
-    """
-    Runs functions which perform the icp aligning.
-    :param timestamp: chosen time
-    :return: meshes after aligning and the center of the bones before and after the alignment
-    """
-
-    plan_bones = Project_2.import_obj([FILEPATH + "{}\\bones\\bones_plan.obj".format(patient)])
-    bones = Project_2.import_obj([FILEPATH + "{}\\bones\\bones{}.obj".format(patient, timestamp)])
-    bones_center_before = Project_2.find_center_of_mass(bones[0][0])
-
-    transform_matrix = Project_2.icp_transformation_matrix(bones[0][0], plan_bones[0][0])
-    transfr_objects = Project_2.vertices_transformation(transform_matrix, deepcopy(objects))
-    after_icp_meshes = create_meshes_from_objs(transfr_objects, color)
-
-    bones_center_after = Project_2.vertices_transformation(transform_matrix, [[[bones_center_before]]])
-
-    return after_icp_meshes, bones_center_before, bones_center_after
-
-
-def get_meshes_after_centering(timestamp, objects, patient, color=ORANGE):
-    """
-    Runs functions which perform the aligning on the center of the prostate.
-    :param timestamp: chosen time
-    :return: meshes after aligning and the center of the prostate before and after the alignment
-    """
-
-    prostate = Project_2.import_obj([FILEPATH + "{}\\prostate\\prostate{}.obj".format(patient, timestamp)])
-    center_before = Project_2.find_center_of_mass(prostate[0][0])
-
-    plan_center = Project_2.find_center_of_mass(Project_2.import_obj(
-        [FILEPATH + "{}\\prostate\\prostate_plan.obj".format(patient)])[0][0])
-    other_center = Project_2.find_center_of_mass(prostate[0][0])
-    center_matrix = Project_2.create_translation_matrix(plan_center, other_center)
-    center_transfr_objects = Project_2.vertices_transformation(center_matrix, deepcopy(objects))
-    after_center_meshes = create_meshes_from_objs(center_transfr_objects, color)
-
-    center_after = Project_2.vertices_transformation(center_matrix, [[[plan_center]]])
-
-    return after_center_meshes, center_before, center_after
-
-
-@app.callback(
-    Output("x-slice-graph", "figure"),
-    Output("y-slice-graph", "figure"),
-    Output("z-slice-graph", "figure"),
-    Input("x-slice-slider", "value"),
-    Input("y-slice-slider", "value"),
-    Input("z-slice-slider", "value"),
-    Input("organs-checklist", "value"),
-    Input("alignment-radioitems", "value"),
-    Input("mode-radioitems", "value"),
-    Input("fst-timestamp-dropdown", "value"),
-    Input("snd-timestamp-dropdown", "value"))
-def create_graph_slices(x_slider, y_slider, z_slider, organs, method, mode,
-                        fst_timestamp, snd_timestamp):
-    """
-    Creates three figures of slices made in the X, Y, and the Z axis direction. These figures are made according to the
-    3D graph.
-    :param x_slider: how far on the X axis normal we want to cut the slice
-    :param y_slider: how far on the Y axis normal we want to cut the slice
-    :param z_slider: how far on the Z axis normal we want to cut the slice
-    :param organs: organs chosen for the 3D graph
-    :param method: method of alignment in the 3D graph
-    :param mode: mode from the 3D graph
-    :param fst_timestamp: chosen in the 3D graph
-    :param snd_timestamp: chosen in the 3D graph
-    :return: the three slices figures
-    """
-    figures, fst_meshes, snd_meshes = [], [], []
-    names = ["X axis slice - Sagittal", "Y axis slice - Coronal", "Z axis slice - Axial"]
-
-    for i in range(3):
-        layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)', height=280,
-                           width=320, plot_bgcolor='rgba(50,50,50,1)', margin=dict(l=40, r=30, t=60, b=60),
-                           showlegend=False, title=dict(text=names[i]))
-        fig = go.Figure(layout=layout)
-        fig.update_layout(title_x=0.5)
-        figures.append(fig)
-
-    if "Two timestamps" in mode:
-        fst_timestamp = "_plan" if fst_timestamp == "plan" else fst_timestamp
-        snd_timestamp = "_plan" if snd_timestamp == "plan" else snd_timestamp
-        fst_meshes = two_slices_mode(method, patient_id, organs, fst_timestamp)
-        snd_meshes = two_slices_mode(method, patient_id, organs, snd_timestamp)
-    else:
-        for organ in organs:
-            fst_meshes.append(
-                trimesh.load_mesh(FILEPATH + "{}\\{}\\{}_plan.obj".format(patient_id, organ.lower(), organ.lower())))
-
-    x_fig = create_slice_final(x_slider, fst_meshes, snd_meshes, figures[0], "x")
-    y_fig = create_slice_final(y_slider, fst_meshes, snd_meshes, figures[1], "y")
-    z_fig = create_slice_final(z_slider, fst_meshes, snd_meshes, figures[2], "z")
-
-    return x_fig, y_fig, z_fig
-
-
-def two_slices_mode(method, patient, organs, timestamp):
-    """
-    Helper function to decide and perform the steps of the chosen method of alignment.
-    :param method: method of the alignment
-    :param patient: chosen patien id
-    :param organs: organs chosen in the 3D graph
-    :param timestamp: chosen time of the timestamp
-    :return: aligned meshes
-    """
-    if "ICP" in method:
-        plan_bones = Project_2.import_obj([FILEPATH + "{}\\bones\\bones_plan.obj".format(patient)])
-        bones = Project_2.import_obj([FILEPATH + "{}\\bones\\bones{}.obj".format(patient, timestamp)])
-        icp_matrix = Project_2.icp_transformation_matrix(bones[0][0], plan_bones[0][0])
-        meshes = selected_organs_slices(icp_matrix, organs, timestamp, patient)
-
-    else:
-        plan_prostate = trimesh.load_mesh(FILEPATH + "{}\\prostate\\prostate_plan.obj".format(patient))
-        prostate = trimesh.load_mesh(FILEPATH + "{}\\prostate\\prostate{}.obj".format(patient, timestamp))
-        key_center = Project_2.find_center_of_mass(plan_prostate.vertices)
-        other_center = Project_2.find_center_of_mass(prostate.vertices)
-        center_matrix = Project_2.create_translation_matrix(key_center, other_center)
-        meshes = selected_organs_slices(center_matrix, organs, timestamp, patient)
-
-    return meshes
-
-
-def selected_organs_slices(matrix, organs, timestamp, patient):
-    """
-    Applies the transformation to selected organs.
-    :param matrix: acquired either from icp algorithm or centering on the prostate
-    :return: transformed meshes
-    """
-    meshes = []
-
-    for organ in organs:
-        mesh = trimesh.load_mesh(FILEPATH + "{}\\{}\\{}{}.obj".format(patient, organ.lower(), organ.lower(), timestamp))
-        meshes.append(deepcopy(mesh).apply_transform(matrix))
-
-    return meshes
-
-
-def create_slice(mesh, slice_slider, params):
-    """
-    Creates the slices from the imported organs
-    :param mesh: mesh of the selected organ
-    :param slice_slider: where on the normal of the axis we want to make the slice
-    :param params: parameters for the computation of the slice
-    :return: created slices
-    """
-    min_val, max_val, plane_origin, plane_normal, axis = params
-    slope = (max_val - 2.5) - (min_val + 0.5)
-
-    if axis == "x":
-        plane_origin[0] = (min_val + 0.5) + slope * slice_slider
-    elif axis == "y":
-        plane_origin[1] = (min_val + 0.5) + slope * slice_slider
-    else:
-        plane_origin[2] = (min_val + 0.5) + slope * slice_slider
-
-    axis_slice = mesh.section(plane_origin=plane_origin, plane_normal=plane_normal)
-
-    slices = []
-    for entity in axis_slice.entities:
-        ordered_slice = order_slice_vertices(axis_slice.vertices, entity.points)
-        i, j, k = np.array(ordered_slice).T
-        slices.append((i, j, k))
-
-    return slices
-
-
-def create_slice_helper(meshes, slice_slider, fig, color, axis):
-    """
-    Helper function for the axis creation and the creation of the slices traces for the figures.
-    :param meshes: meshes of the selected organs
-    :param slice_slider: where on the normal of the axis we want to make the slice
-    :param fig: slice graph
-    :param color: either orange or blue according to the slices order
-    :param axis: which axis slice we are creating
-    """
-    for mesh in meshes:
-        if axis == "x":
-            params = mesh.bounds[0][0], mesh.bounds[1][0], [0, mesh.centroid[1], mesh.centroid[2]], [1, 0, 0], "x"
-            slices = create_slice(mesh, slice_slider, params)
-            for _, x, y in slices:
-                fig.add_trace(go.Scatter(x=x, y=y, line=go.scatter.Line(color=color, width=3)))
-            fig.update_xaxes(title="y [mm]")
-            fig.update_yaxes(title="z [mm]")
-
-        elif axis == "y":
-            params = mesh.bounds[0][1], mesh.bounds[1][1], [mesh.centroid[0], 0, mesh.centroid[2]], [0, 1, 0], "y"
-            slices = create_slice(mesh, slice_slider, params)
-            for x, _, y in slices:
-                fig.add_trace(go.Scatter(x=x, y=y, line=go.scatter.Line(color=color, width=3)))
-            fig.update_xaxes(title="x [mm]")
-            fig.update_yaxes(title="z [mm]")
-        else:
-            params = mesh.bounds[0][2], mesh.bounds[1][2], [mesh.centroid[0], mesh.centroid[1], 0], [0, 0, 1], "z"
-            slices = create_slice(mesh, slice_slider, params)
-            for x, y, _ in slices:
-                fig.add_trace(go.Scatter(x=x, y=y, line=go.scatter.Line(color=color, width=3)))
-            fig.update_xaxes(title="x [mm]")
-            fig.update_yaxes(title="y [mm]")
-
-
-def create_slice_final(slice_slider, icp_meshes, centered_meshes, fig, axis):
-    """
-    Calls the function to create the axis slices.
-    :param slice_slider: where on the normal of the axis we want to make the slice
-    :param fig: slice graph
-    :param axis: which axis slice are we making
-    :return slice figure
-    """
-    if icp_meshes:
-        create_slice_helper(icp_meshes, slice_slider, fig, PINK, axis)
-    if centered_meshes:
-        create_slice_helper(centered_meshes, slice_slider, fig, ORANGE, axis)
-
-    fig.update_xaxes(constrain="domain")
-    fig.update_yaxes(scaleanchor="x")
-
-    return fig
-
-
-def add_planes(point, normal):
-    d = -point.dot(normal)
-    xx, yy = np.meshgrid(range(10), range(10))
-    z = (-normal[0] * xx - normal[1] * yy - d) * 1. / normal[2]
-
-    fig = go.Surface(x=xx, y=yy, z=z)
-
-    return fig
 
 
 def decide_organs_highlights(click_data, click_id, icp):
@@ -546,6 +119,7 @@ def decide_organs_highlights(click_data, click_id, icp):
     """
     global patient_id
     global timestamp_i
+    global organ
 
     colors = [[LIGHT_BLUE] * 13, [GREEN] * 13, [RED] * 13] if icp else [[PURPLE] * 13, [GREEN] * 13, [RED] * 13]
     sizes = [[0] * 13, [0] * 13, [0] * 13]
@@ -554,9 +128,12 @@ def decide_organs_highlights(click_data, click_id, icp):
     if "heatmap" in click_id:
         patient_id = PATIENTS[data["y"]]
         timestamp_i = int(data["x"]) // 4
+        organ = data["text"]
         if data["text"] == "Bladder":
+            organ = "Bladder"
             colors[1][timestamp_i], sizes[1][timestamp_i] = "white", 4
         elif data["text"] == "Rectum":
+            organ = "Rectum"
             colors[2][timestamp_i], sizes[2][timestamp_i] = "white", 4
         elif (data["text"] == "Prostate" and icp) or (data["text"] == "Bones" and not icp):
             colors[0][timestamp_i], sizes[0][timestamp_i] = "white", 4
@@ -565,10 +142,13 @@ def decide_organs_highlights(click_data, click_id, icp):
         patient_id = data["x"]
         trace = data["curveNumber"] if data["curveNumber"] < 3 else int((data["curveNumber"]) - 1) % 3
         if trace == 1:
+            organ = "Bladder"
             colors[1], sizes[1] = ["white"] * 13, [4] * 13
         elif trace == 2:
+            organ = "Rectum"
             colors[2], sizes[2] = ["white"] * 13, [4] * 13
         elif (data["curveNumber"] == 0 and icp) or (data["curveNumber"] == 4 and not icp):
+            organ = "Prostate" if data["curveNumber"] == 0 else "Bones"
             colors[0], sizes[0] = ["white"] * 13, [4] * 13
 
     elif "organ" in click_id:
@@ -577,13 +157,23 @@ def decide_organs_highlights(click_data, click_id, icp):
         if trace != 0 or (icp and data["marker.line.color"] == LIGHT_BLUE) \
                 or (not icp and data["marker.line.color"] == PURPLE):
             colors[trace][timestamp_i], sizes[trace][timestamp_i] = "white", 4
+        if trace == 1:
+            organ = "Bladder"
+        elif trace == 2:
+            organ = "Rectum"
+        elif data["curveNumber"] == 0:
+            organ = "Prostate"
+        else:
+            organ = "Bones"
 
     elif "alignment-differences" in click_id:
         timestamp_i = int(data["x"]) - 1
         if data["curveNumber"] == 0:
+            organ = "Bladder"
             colors[1][timestamp_i], sizes[1][timestamp_i] = "white", 4
         elif data["curveNumber"] == 1:
             colors[2][timestamp_i], sizes[2][timestamp_i] = "white", 4
+            organ = "Rectum"
 
     elif "rotations-graph" in click_id:
         timestamp_i = int(data["x"]) - 1
@@ -725,7 +315,6 @@ def decide_differences_highlights(click_data, click_id):
     Input("alignment-differences", "clickData"),
     Input("organ-distances", "clickData"),
     Input("average-distances", "clickData"),
-
     Input("heatmap-icp", "clickData"),
     Input("heatmap-center", "clickData"),
     Input("rotations-graph", "clickData"))
@@ -780,19 +369,12 @@ def create_distances_between_alignments(differences, organ_distances, average_di
     Input("rotations-graph", "clickData"),
     Input("heatmap-icp", "clickData"),
     Input("heatmap-center", "clickData"),
-    Input("average-distances", "clickData"),
-
     Input("organ-distances", "clickData"),
     Input("alignment-differences", "clickData"))
-def create_rotation_icp_graph(rotations_graph, heatmap_icp, heatmap_center, average_distances,
-                              organ_distances,
-                              differences):
-    global patient_id
-
+def create_rotation_icp_graph(rotations_graph, heatmap_icp, heatmap_center, organ_distances, differences):
     colors = [[CYAN1] * 13, [CYAN2] * 13, [CYAN3] * 13]
-    all_click_data = [rotations_graph, heatmap_icp, heatmap_center, average_distances, organ_distances, differences]
-    all_ids = ["rotations-graph", "heatmap-icp", "heatmap-center", "average-distances", "organ-distances",
-               "alignment-differences"]
+    all_click_data = [rotations_graph, heatmap_icp, heatmap_center, organ_distances, differences]
+    all_ids = ["rotations-graph", "heatmap-icp", "heatmap-center", "organ-distances", "alignment-differences"]
     click_data, click_id = resolve_click_data(all_click_data, all_ids)
 
     if click_data:
@@ -1193,6 +775,438 @@ def create_data_for_heatmap(icp):
     Input("rotations-graph", "clickData"))
 def update_timestamp_dropdown(organ_distances, differences, heatmap_icp, heatmap_center, rotations_graph):
     return timestamp_i + 1
+
+
+@app.callback(
+    Output("rotations-axes", "figure"),
+    Input("heatmap-icp", "clickData"),
+    Input("heatmap-center", "clickData"),
+    Input("average-distances", "clickData"),
+    Input("alignment-radioitems", "value"),
+    Input("mode-radioitems", "value"),
+    Input("fst-timestamp-dropdown", "value"))
+def create_3d_angle(heatmap_icp, heatmap_center, average_distances, method, mode, fst_timestamp):
+    layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)', showlegend=False,
+                       plot_bgcolor='rgba(50,50,50,1)', margin=dict(l=10, r=10, t=10, b=10), height=280, width=320)
+    fig = go.Figure(layout=layout)
+    camera = dict(up=dict(x=0, y=0, z=1), center=dict(x=0, y=0, z=0), eye=dict(x=1.1, y=0.4, z=0.4))
+    annot = []
+    steps = 50
+    cone_tip = 7
+    size = 12
+
+    create_rotation_axes(fig, annot)
+    t = np.linspace(0, 10, steps)
+    x, y, z = 20, np.cos(t) * size, np.sin(t) * size
+
+    if "ICP" in method and "Two" in mode and fst_timestamp == "plan":
+        text_x = str(round(rotations[PATIENTS.index(patient_id)][0][0][timestamp_i], 2)) + "°"
+        text_y = str(round(rotations[PATIENTS.index(patient_id)][0][1][timestamp_i], 2)) + "°"
+        text_z = str(round(rotations[PATIENTS.index(patient_id)][0][2][timestamp_i], 2)) + "°"
+    else:
+        text_x, text_y, text_z = "0°", "0°", "0°"
+
+    fig.add_trace(go.Scatter3d(mode="lines", x=[x] * 25, y=y, z=z, line=dict(width=5, color=CYAN1),
+                               hoverinfo='none'))
+    fig.add_trace(go.Cone(x=[x], y=[y[0]], z=[z[0]], u=[0], v=[cone_tip * (y[0] - y[1])], w=[cone_tip * (z[0] - z[1])],
+                          showlegend=False, showscale=False, colorscale=[[0, CYAN1], [1, CYAN1]],
+                          hoverinfo='none'))
+    annot.append(dict(showarrow=False, text=text_x, x=25, y=-25, z=0, font=dict(color=CYAN1, size=15)))
+
+    x, y, z = np.cos(t) * size, 20, np.sin(t) * size
+    fig.add_trace(go.Scatter3d(mode="lines", x=x, y=[y] * 25, z=z, line=dict(width=5, color=CYAN2), hoverinfo='none'))
+    fig.add_trace(go.Cone(x=[x[0]], y=[y], z=[z[0]], u=[cone_tip * (x[0] - x[1])], v=[0], w=[cone_tip * (z[0] - z[1])],
+                          showlegend=False, showscale=False, colorscale=[[0, CYAN2], [1, CYAN2]], hoverinfo='none'))
+    annot.append(dict(showarrow=False, text=text_y, x=5, y=35, z=15, font=dict(color=CYAN2, size=15)))
+
+    x, y, z = np.cos(t) * size, np.sin(t) * size, 20
+    fig.add_trace(go.Scatter3d(mode="lines", x=x, y=y, z=[z] * 25, line=dict(width=5, color=CYAN3),
+                               hoverinfo='none'))
+    fig.add_trace(go.Cone(x=[x[0]], y=[y[0]], z=[z], u=[cone_tip * (x[0] - x[1])], v=[cone_tip * (y[0] - y[1])],
+                          w=[0], showlegend=False, showscale=False, colorscale=[[0, CYAN3], [1, CYAN3]],
+                          hoverinfo='none'))
+    annot.append(dict(showarrow=False, text=text_z, x=10, y=-10, z=z + 10, font=dict(color=CYAN3, size=15)))
+
+    fig.update_layout(scene=dict(annotations=annot, camera=camera))
+
+    return fig
+
+
+def create_rotation_axes(fig, annot):
+    cone_tip = 12
+    fig.add_trace(go.Scatter3d(x=[-70, 50], y=[0, 0], z=[0, 0], mode='lines', hoverinfo='skip',
+                               line=dict(color=CYAN1, width=7)))
+    fig.add_trace(go.Cone(x=[50], y=[0], z=[0], u=[cone_tip * (50 - 48)], v=[0], w=[0], hoverinfo='none',
+                          showlegend=False, showscale=False, colorscale=[[0, CYAN1], [1, CYAN1]]))
+
+    fig.add_trace(go.Scatter3d(x=[0, 0], y=[-70, 50], z=[0, 0], mode='lines', hoverinfo='skip',
+                               line=dict(color=CYAN2, width=7)))
+    fig.add_trace(go.Cone(x=[0], y=[50], z=[0], u=[0], v=[cone_tip * (50 - 48)], w=[0], hoverinfo='none',
+                          showlegend=False, showscale=False, colorscale=[[0, CYAN2], [1, CYAN2]]))
+
+    fig.add_trace(go.Scatter3d(x=[0, 0], y=[0, 0], z=[-50, 50], mode='lines', hoverinfo='skip',
+                               line=dict(color=CYAN3, width=7)))
+    fig.add_trace(go.Cone(x=[0], y=[0], z=[50], u=[0], v=[0], w=[cone_tip * (50 - 48)], hoverinfo='none',
+                          showlegend=False, showscale=False, colorscale=[[0, CYAN3], [1, CYAN3]]))
+
+    annot.append(dict(showarrow=False, text="X", x=65, y=0, z=0, font=dict(color=CYAN1, size=16)))
+    annot.append(dict(showarrow=False, text="Y", x=0, y=65, z=0, font=dict(color=CYAN2, size=16)))
+    annot.append(dict(showarrow=False, text="Z", x=0, y=0, z=65, font=dict(color=CYAN3, size=16)))
+
+    fig.update_layout(scene=dict(xaxis=dict(backgroundcolor=constants.GREY2, gridcolor=constants.LIGHT_GREY2),
+                                 yaxis=dict(backgroundcolor=constants.GREY2, gridcolor=constants.LIGHT_GREY2),
+                                 zaxis=dict(backgroundcolor=constants.GREY2, gridcolor=constants.LIGHT_GREY2)))
+
+
+@app.callback(
+    [Output("main-graph", "figure"),
+     Output("organs-checklist", "value")],
+    Input("alignment-radioitems", "value"),
+    Input("organs-checklist", "value"),
+    Input("mode-radioitems", "value"),
+    Input("fst-timestamp-dropdown", "value"),
+    Input("snd-timestamp-dropdown", "value"),
+    Input("heatmap-icp", "clickData"),
+    Input("heatmap-center", "clickData"),
+    Input("average-distances", "clickData"),
+    Input("organ-distances", "clickData"),
+    Input("alignment-differences", "clickData"))
+def create_3dgraph(method, organs, mode, fst_timestamp, snd_timestamp, heatmap_icp, heatmap_center, average_distances,
+                   organ_distances, differences):
+    """
+    Creates the 3D figure and visualises it. The last four arguments are just for updating the graph.
+    :param method: ICP or prostate aligning registration method
+    :param organs: organs selected by the user
+    :param mode: showing either Plan organs or organ in the Two timestamps
+    :param mov: showing either all of the movement vectors, only yhe average ones or none
+    :return: the 3d figure
+    """
+    fst_timestamp = "_plan" if fst_timestamp == "plan" else fst_timestamp
+    snd_timestamp = "_plan" if snd_timestamp == "plan" else snd_timestamp
+
+    if "distances" in ctx.triggered_id or "heatmap" in ctx.triggered_id or "differences" in ctx.triggered_id:
+        organs = [organ]
+
+    objects_fst = import_selected_organs(organs, fst_timestamp, patient_id)
+    objects_snd = import_selected_organs(organs, snd_timestamp, patient_id)
+
+    camera = dict(up=dict(x=0, y=0, z=1), center=dict(x=0, y=0, z=0), eye=dict(x=0.5, y=-2, z=0))
+    layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)', uirevision=patient_id,
+                       plot_bgcolor='rgba(50,50,50,1)', margin=dict(l=40, r=40, t=60, b=40), showlegend=True)
+    fig = go.Figure(layout=layout)
+    fig.update_layout(scene_camera=camera, scene=dict(xaxis_title='x [mm]', yaxis_title='y [mm]', zaxis_title='z [mm]'))
+
+    fst_meshes, snd_meshes = \
+        decide_3d_graph_mode(mode, fig, method, organs, fst_timestamp, snd_timestamp, objects_fst, objects_snd)
+
+    for meshes in [fst_meshes, snd_meshes]:
+        for mesh in meshes:
+            mesh.update(cmin=-7, lightposition=dict(x=100, y=200, z=0),
+                        lighting=dict(ambient=0.4, diffuse=1, fresnel=0.1, specular=1, roughness=0.5,
+                                      facenormalsepsilon=1e-15, vertexnormalsepsilon=1e-15))
+            fig.add_trace(mesh)
+
+    return fig, organs
+
+
+def import_selected_organs(organs, time_or_plan, patient):
+    """
+    Imports selected organs as .obj files.
+    :param organs: selected organs
+    :param time_or_plan: chosen timestamp or _plan suffix
+    :param patient: id of the patient
+    :return: imported objs
+    """
+    objects = []
+    for organ in organs:
+        objects.extend(Project_2.import_obj([FILEPATH + "{}\\{}\\{}{}.obj"
+                                            .format(patient, organ.lower(), organ.lower(), time_or_plan)]))
+    return objects
+
+
+def decide_3d_graph_mode(mode, fig, method, organs, fst_timestamp, snd_timestamp, objects_fst, objects_snd):
+    """
+    Helper function to perform commands according to the chosen mode
+    :param method: ICP or prostate aligning registration method
+    :param organs: organs selected by the user
+    :param mode: showing either Plan organs or organ in the Two timestamps
+    :param mov: showing either all of the movement vectors, only yhe average ones or none
+    :return: created meshes
+    """
+    fst_meshes, snd_meshes = [], []
+
+    if "Two timestamps" in mode:
+        fst_meshes, snd_meshes, center1_after, center2_after = \
+            two_timestamps_mode(method, fst_timestamp, snd_timestamp, objects_fst, objects_snd)
+
+        fst_timestamp = "plan organs" if "_plan" == fst_timestamp else "timestamp number {}".format(fst_timestamp)
+        snd_timestamp = "plan organs" if "_plan" == snd_timestamp else "timestamp number {}".format(snd_timestamp)
+
+        fig.update_layout(title_text="Patient {}, {} (pink) and {} (purple)"
+                          .format(patient_id, fst_timestamp, snd_timestamp), title_x=0.5, title_y=0.95)
+
+    else:
+        objects = import_selected_organs(organs, "_plan", patient_id)
+        fst_meshes = create_meshes_from_objs(objects, PINK)
+        fig.update_layout(title_text="Plan organs of patient {}".format(patient_id), title_x=0.5, title_y=0.95)
+
+    return fst_meshes, snd_meshes
+
+
+def two_timestamps_mode(method, fst_timestamp, snd_timestamp, objects_fst, objects_snd):
+    """
+    Helper to get the chosen meshes and align them according to the selected method. Compute the center of the meshes.
+    :param method: ICP or prostate centering
+    :param fst_timestamp: number of the first selected timestamp
+    :param snd_timestamp:number of the second selected timestamp
+    :param objects_fst: objects imported in the time of the first timestamp
+    :param objects_snd: objects imported in the time of the second timestamp
+    :return: aligned meshes and center of the moved organs
+    """
+    fst_meshes, snd_meshes = [], []
+    if "ICP" in method:
+        meshes, center1_before, center1_after = get_meshes_after_icp(fst_timestamp, objects_fst, patient_id)
+        fst_meshes.extend(meshes)
+        meshes, center2_before, center2_after = get_meshes_after_icp(snd_timestamp, objects_snd, patient_id, ORANGE)
+        snd_meshes.extend(meshes)
+
+    else:
+        meshes, center1_before, center1_after = get_meshes_after_centering(fst_timestamp, objects_fst, patient_id, PINK)
+        fst_meshes.extend(meshes)
+        meshes, center2_before, center2_after = get_meshes_after_centering(snd_timestamp, objects_snd, patient_id)
+        snd_meshes.extend(meshes)
+
+    return fst_meshes, snd_meshes, center1_after, center2_after
+
+
+def get_meshes_after_icp(timestamp, objects, patient, color=PINK):
+    """
+    Runs functions which perform the icp aligning.
+    :param timestamp: chosen time
+    :return: meshes after aligning and the center of the bones before and after the alignment
+    """
+
+    plan_bones = Project_2.import_obj([FILEPATH + "{}\\bones\\bones_plan.obj".format(patient)])
+    bones = Project_2.import_obj([FILEPATH + "{}\\bones\\bones{}.obj".format(patient, timestamp)])
+    bones_center_before = Project_2.find_center_of_mass(bones[0][0])
+
+    transform_matrix = Project_2.icp_transformation_matrix(bones[0][0], plan_bones[0][0])
+    transfr_objects = Project_2.vertices_transformation(transform_matrix, deepcopy(objects))
+    after_icp_meshes = create_meshes_from_objs(transfr_objects, color)
+
+    bones_center_after = Project_2.vertices_transformation(transform_matrix, [[[bones_center_before]]])
+
+    return after_icp_meshes, bones_center_before, bones_center_after
+
+
+def get_meshes_after_centering(timestamp, objects, patient, color=ORANGE):
+    """
+    Runs functions which perform the aligning on the center of the prostate.
+    :param timestamp: chosen time
+    :return: meshes after aligning and the center of the prostate before and after the alignment
+    """
+
+    prostate = Project_2.import_obj([FILEPATH + "{}\\prostate\\prostate{}.obj".format(patient, timestamp)])
+    center_before = Project_2.find_center_of_mass(prostate[0][0])
+
+    plan_center = Project_2.find_center_of_mass(Project_2.import_obj(
+        [FILEPATH + "{}\\prostate\\prostate_plan.obj".format(patient)])[0][0])
+    other_center = Project_2.find_center_of_mass(prostate[0][0])
+    center_matrix = Project_2.create_translation_matrix(plan_center, other_center)
+    center_transfr_objects = Project_2.vertices_transformation(center_matrix, deepcopy(objects))
+    after_center_meshes = create_meshes_from_objs(center_transfr_objects, color)
+
+    center_after = Project_2.vertices_transformation(center_matrix, [[[plan_center]]])
+
+    return after_center_meshes, center_before, center_after
+
+
+@app.callback(
+    Output("x-slice-graph", "figure"),
+    Output("y-slice-graph", "figure"),
+    Output("z-slice-graph", "figure"),
+    Input("x-slice-slider", "value"),
+    Input("y-slice-slider", "value"),
+    Input("z-slice-slider", "value"),
+    Input("organs-checklist", "value"),
+    Input("alignment-radioitems", "value"),
+    Input("mode-radioitems", "value"),
+    Input("fst-timestamp-dropdown", "value"),
+    Input("snd-timestamp-dropdown", "value"))
+def create_graph_slices(x_slider, y_slider, z_slider, organs, method, mode,
+                        fst_timestamp, snd_timestamp):
+    """
+    Creates three figures of slices made in the X, Y, and the Z axis direction. These figures are made according to the
+    3D graph.
+    :param x_slider: how far on the X axis normal we want to cut the slice
+    :param y_slider: how far on the Y axis normal we want to cut the slice
+    :param z_slider: how far on the Z axis normal we want to cut the slice
+    :param organs: organs chosen for the 3D graph
+    :param method: method of alignment in the 3D graph
+    :param mode: mode from the 3D graph
+    :param fst_timestamp: chosen in the 3D graph
+    :param snd_timestamp: chosen in the 3D graph
+    :return: the three slices figures
+    """
+    figures, fst_meshes, snd_meshes = [], [], []
+    names = ["X axis slice - Sagittal", "Y axis slice - Coronal", "Z axis slice - Axial"]
+
+    for i in range(3):
+        layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)', height=280,
+                           width=320, plot_bgcolor='rgba(50,50,50,1)', margin=dict(l=40, r=30, t=60, b=60),
+                           showlegend=False, title=dict(text=names[i]))
+        fig = go.Figure(layout=layout)
+        fig.update_layout(title_x=0.5)
+        figures.append(fig)
+
+    if "Two timestamps" in mode:
+        fst_timestamp = "_plan" if fst_timestamp == "plan" else fst_timestamp
+        snd_timestamp = "_plan" if snd_timestamp == "plan" else snd_timestamp
+        fst_meshes = two_slices_mode(method, patient_id, organs, fst_timestamp)
+        snd_meshes = two_slices_mode(method, patient_id, organs, snd_timestamp)
+    else:
+        for organ in organs:
+            fst_meshes.append(
+                trimesh.load_mesh(FILEPATH + "{}\\{}\\{}_plan.obj".format(patient_id, organ.lower(), organ.lower())))
+
+    x_fig = create_slice_final(x_slider, fst_meshes, snd_meshes, figures[0], "x")
+    y_fig = create_slice_final(y_slider, fst_meshes, snd_meshes, figures[1], "y")
+    z_fig = create_slice_final(z_slider, fst_meshes, snd_meshes, figures[2], "z")
+
+    return x_fig, y_fig, z_fig
+
+
+def two_slices_mode(method, patient, organs, timestamp):
+    """
+    Helper function to decide and perform the steps of the chosen method of alignment.
+    :param method: method of the alignment
+    :param patient: chosen patien id
+    :param organs: organs chosen in the 3D graph
+    :param timestamp: chosen time of the timestamp
+    :return: aligned meshes
+    """
+    if "ICP" in method:
+        plan_bones = Project_2.import_obj([FILEPATH + "{}\\bones\\bones_plan.obj".format(patient)])
+        bones = Project_2.import_obj([FILEPATH + "{}\\bones\\bones{}.obj".format(patient, timestamp)])
+        icp_matrix = Project_2.icp_transformation_matrix(bones[0][0], plan_bones[0][0])
+        meshes = selected_organs_slices(icp_matrix, organs, timestamp, patient)
+
+    else:
+        plan_prostate = trimesh.load_mesh(FILEPATH + "{}\\prostate\\prostate_plan.obj".format(patient))
+        prostate = trimesh.load_mesh(FILEPATH + "{}\\prostate\\prostate{}.obj".format(patient, timestamp))
+        key_center = Project_2.find_center_of_mass(plan_prostate.vertices)
+        other_center = Project_2.find_center_of_mass(prostate.vertices)
+        center_matrix = Project_2.create_translation_matrix(key_center, other_center)
+        meshes = selected_organs_slices(center_matrix, organs, timestamp, patient)
+
+    return meshes
+
+
+def selected_organs_slices(matrix, organs, timestamp, patient):
+    """
+    Applies the transformation to selected organs.
+    :param matrix: acquired either from icp algorithm or centering on the prostate
+    :return: transformed meshes
+    """
+    meshes = []
+
+    for organ in organs:
+        mesh = trimesh.load_mesh(FILEPATH + "{}\\{}\\{}{}.obj".format(patient, organ.lower(), organ.lower(), timestamp))
+        meshes.append(deepcopy(mesh).apply_transform(matrix))
+
+    return meshes
+
+
+def create_slice(mesh, slice_slider, params):
+    """
+    Creates the slices from the imported organs
+    :param mesh: mesh of the selected organ
+    :param slice_slider: where on the normal of the axis we want to make the slice
+    :param params: parameters for the computation of the slice
+    :return: created slices
+    """
+    min_val, max_val, plane_origin, plane_normal, axis = params
+    slope = (max_val - 2.5) - (min_val + 0.5)
+
+    if axis == "x":
+        plane_origin[0] = (min_val + 0.5) + slope * slice_slider
+    elif axis == "y":
+        plane_origin[1] = (min_val + 0.5) + slope * slice_slider
+    else:
+        plane_origin[2] = (min_val + 0.5) + slope * slice_slider
+
+    axis_slice = mesh.section(plane_origin=plane_origin, plane_normal=plane_normal)
+
+    slices = []
+    for entity in axis_slice.entities:
+        ordered_slice = order_slice_vertices(axis_slice.vertices, entity.points)
+        i, j, k = np.array(ordered_slice).T
+        slices.append((i, j, k))
+
+    return slices
+
+
+def create_slice_helper(meshes, slice_slider, fig, color, axis):
+    """
+    Helper function for the axis creation and the creation of the slices traces for the figures.
+    :param meshes: meshes of the selected organs
+    :param slice_slider: where on the normal of the axis we want to make the slice
+    :param fig: slice graph
+    :param color: either orange or blue according to the slices order
+    :param axis: which axis slice we are creating
+    """
+    for mesh in meshes:
+        if axis == "x":
+            params = mesh.bounds[0][0], mesh.bounds[1][0], [0, mesh.centroid[1], mesh.centroid[2]], [1, 0, 0], "x"
+            slices = create_slice(mesh, slice_slider, params)
+            for _, x, y in slices:
+                fig.add_trace(go.Scatter(x=x, y=y, line=go.scatter.Line(color=color, width=3)))
+            fig.update_xaxes(title="y [mm]")
+            fig.update_yaxes(title="z [mm]")
+
+        elif axis == "y":
+            params = mesh.bounds[0][1], mesh.bounds[1][1], [mesh.centroid[0], 0, mesh.centroid[2]], [0, 1, 0], "y"
+            slices = create_slice(mesh, slice_slider, params)
+            for x, _, y in slices:
+                fig.add_trace(go.Scatter(x=x, y=y, line=go.scatter.Line(color=color, width=3)))
+            fig.update_xaxes(title="x [mm]")
+            fig.update_yaxes(title="z [mm]")
+        else:
+            params = mesh.bounds[0][2], mesh.bounds[1][2], [mesh.centroid[0], mesh.centroid[1], 0], [0, 0, 1], "z"
+            slices = create_slice(mesh, slice_slider, params)
+            for x, y, _ in slices:
+                fig.add_trace(go.Scatter(x=x, y=y, line=go.scatter.Line(color=color, width=3)))
+            fig.update_xaxes(title="x [mm]")
+            fig.update_yaxes(title="y [mm]")
+
+
+def create_slice_final(slice_slider, icp_meshes, centered_meshes, fig, axis):
+    """
+    Calls the function to create the axis slices.
+    :param slice_slider: where on the normal of the axis we want to make the slice
+    :param fig: slice graph
+    :param axis: which axis slice are we making
+    :return slice figure
+    """
+    if icp_meshes:
+        create_slice_helper(icp_meshes, slice_slider, fig, PINK, axis)
+    if centered_meshes:
+        create_slice_helper(centered_meshes, slice_slider, fig, ORANGE, axis)
+
+    fig.update_xaxes(constrain="domain")
+    fig.update_yaxes(scaleanchor="x")
+
+    return fig
+
+
+def add_planes(point, normal):
+    d = -point.dot(normal)
+    xx, yy = np.meshgrid(range(10), range(10))
+    z = (-normal[0] * xx - normal[1] * yy - d) * 1. / normal[2]
+
+    fig = go.Surface(x=xx, y=yy, z=z)
+
+    return fig
 
 
 if __name__ == '__main__':

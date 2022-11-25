@@ -15,41 +15,40 @@ layout = html.Div(className="row", children=[
         html.H6("""In radiotherapy, it is fundamental to position the patient before delivering the irradiation dose 
         to both: affect the tumour and avoid the healthy organs as much as possible. A medical image registration 
         aligns the patient's position at a given time with their position on the treatment plan CT image. It matches 
-        them in the best way possible to acquire the desired position of the patient. The function of this page is to 
+        them in the best way possible to acquire the desired position of the patient. The goal of this page is to 
         show the difference between the two registration methods to improve prostate cancer patients' treatment 
         planning.""",
                 style={"margin-left": "40px", "margin-right": "40px", "margin-top": "10px", "margin-bottom": "10px",
                        "color": "#081e5e", "font-size": "15pt", "background-color": constants.LIGHT_GREY,
                        "border-radius": "5px", "padding": "10px 30px 10px 30px"}),
 
-        dcc.Markdown("""The **ICP** (Iterative Closest Point) is a registration method used to align the anatomy 
-        based on the patient's bones. **Prostate centring**, the second registration method, considers the prostate's 
-        position instead of the bones. The main difference between these two methods is that the first one does 
-        consider the rotation of the organs in the patient's body; however, the second only takes into consideration 
-        the translation. Another distinction is that bones in the human body move a lot less in relation to organs 
-        than the prostate.""",
+        dcc.Markdown("""We use **ICP** (Iterative Closest Point) registration method to align the anatomy based on 
+        the patient's bones. **Prostate centring**, the second registration method, considers the prostate's position 
+        instead of the bones. The difference between these two approaches is that bones have a rigid position within 
+        the human body, while the prostate can move within the pelvic region. Furthermore, the ICP method also 
+        considers the rotation of the organs with respect to bones, while the second method only considers 
+        translation.""",
                      style={"margin-left": "40px", "margin-right": "40px", "margin-top": "10px",
                             "margin-bottom": "10px", "color": "#081e5e", "font-size": "15pt",
                             "background-color": constants.LIGHT_GREY, "border-radius": "5px",
                             "padding": "10px 30px 10px 30px"}),
 
-        html.H6("""The comparison between these two methods is demonstrated on eight patients during 13 treatment 
+        dcc.Markdown("""The comparison between these two methods is demonstrated on eight patients during 13 treatment 
         appointments. There are several graphs that depict the distinction from different points of view, 
-        divided into three sections. The overview section depicts all patients' data at the same time; the individual 
-        patient section shows all the data of one patient, and the timestamp section compares only one or two 
-        patient's images. All graphs on this page are interactive and mutually connected, so one can click on one 
-        chart and see the data highlighted in other charts. For example, in the first heatmap, by clicking on the 
-        first cell in line with number 722, all graphs in the individual patient section will show the patient number 
-        722 instead of the number 137 displayed by default.""",
+        divided into three sections. The **patients overview section** depicts all patients' data at the same time; 
+        the **individual patient section** shows all the data of one patient, and the **timestamp section** compares 
+        only one or two patient's images. All graphs on this page are interactive and mutually connected, so one can 
+        click on one chart and see the data highlighted in other charts. For example, in the first heatmap, 
+        by clicking on the first cell in line with number 722, all graphs in the individual patient section will show 
+        the patient number 722 instead of the number 137 displayed by default.""",
                 style={"margin-left": "40px", "margin-right": "40px", "margin-top": "10px", "margin-bottom": "10px",
                        "color": "#081e5e", "font-size": "15pt", "background-color": constants.LIGHT_GREY,
                        "border-radius": "5px",
                        "padding": "10px 30px 10px 30px"}),
 
         html.H6("Patients overview section", style={"margin": "20px 40px 20px 40px", "color": "#171717", "font-size":
-            "20pt", "font-family": "Bahnschrift", 'font-weight': 'bold',
-                                                    "background-color": constants.LIGHT_GREEN, "border-radius": "5px",
-                                                    "padding": "10px 0px 10px 0px", "text-align": "center"}),
+                "20pt", "font-family": "Bahnschrift", 'font-weight': 'bold', "background-color": constants.LIGHT_GREEN,
+                "border-radius": "5px", "padding": "10px 0px 10px 0px", "text-align": "center"}),
 
         # AVERAGES ------------------------------------------------------------------------------------------
 
@@ -118,7 +117,6 @@ layout = html.Div(className="row", children=[
             dcc.Graph(id="organ-distances", style={'display': 'inline-block', "padding": "20px 40px 20px 40px",
                                                    "width": "95%"})]),
 
-
         # DIFFERENCES GRAPH -----------------------------------------------------------------------------------------
 
         html.H6("""The graph below shows the distance difference between the two registration methods, which are 
@@ -134,7 +132,8 @@ layout = html.Div(className="row", children=[
 
     # ROTATIONS GRAPH -----------------------------------------------------------------------------------------------
     html.H6("""This graph depicts how the organs in a given time rotated in relation to the organs in the plan 
-    images. The rotations along the three axes were computed with the ICP algorithm, and they are shown in angles.""",
+    images. The rotations along the three axes were computed with the ICP algorithm, and they are shown as angles in 
+    degrees.""",
             style={"margin-left": "40px", "margin-right": "40px", "color": "#081e5e",
                    "background-color": constants.LIGHT_GREY, "border-radius": "5px",
                    "padding": "10px 30px 10px 30px"}),
@@ -152,13 +151,14 @@ layout = html.Div(className="row", children=[
 
     html.Div(className="row", children=[
         html.Div(className="row", children=[
-            html.H6("""In the 3D chart are depicted organs loaded from patients' anatomy scans. It has two modes, 
+            html.H6("""The 3D chart depicts the organs loaded from patients' anatomy scans. It has two modes, 
             the first showing the organs and the bones from the plan CT scans and in the second mode, one can select 
-            two different scans, the alignment method and then compare the results. In both modes, rendering only 
-            some organs and bones is possible. The last group of graphs represents organs selected in the 3D graph 
-            but in the 2D slices along the main anatomical planes, and a rotation axes graph. There are three sliders 
-            that can be used to move the imaged slice in the direction of the given axis. The rotation graph shows 
-            the angles in which the organs selected in the second timestamp rotated after the ICP alignment.""",
+            two different scans, the alignment method and then compare the organ positions. In both modes, 
+            rendering only some organs and bones is possible. The last group of graphs represents organs selected in 
+            the 3D graph but in the 2D slices along the main anatomical planes, and a rotation axes graph. There are 
+            three sliders that can be used to move the imaged slice in the direction of the given axis. The rotation 
+            graph shows the angles in which the organs selected in the second timestamp rotated after the ICP 
+            alignment.""",
                     style={"margin-left": "40px", "margin-right": "40px", "color": "#081e5e",
                            "background-color": constants.LIGHT_GREY, "border-radius": "5px",
                            "padding": "20px 20px 20px 20px"})]),
