@@ -542,10 +542,10 @@ def resolve_click_data(click_data, ids):
 
 
 def create_lines_for_heatmaps(fig):
-    fig.add_shape(type="rect", x0=-0.48, y0=-0.5, x1=-0.48, y1=7.6, line_width=4.15, line_color=GREY)
-    fig.add_shape(type="rect", x0=13 * 4 - 0.5, y0=-0.5, x1=13 * 4 - 0.5, y1=7.6, line_width=4.15, line_color=GREY)
+    fig.add_shape(type="rect", x0=-0.48, y0=-0.5, x1=-0.48, y1=7.5, line_width=4.15, line_color=GREY)
+    fig.add_shape(type="rect", x0=13 * 4 - 0.5, y0=-0.5, x1=13 * 4 - 0.5, y1=7.5, line_width=4.15, line_color=GREY)
     for i in range(1, 13):
-        fig.add_shape(type="rect", x0=4 * i - 0.5, y0=-0.5, x1=4 * i - 0.5, y1=8.4, line_width=4, line_color=GREY)
+        fig.add_shape(type="rect", x0=4 * i - 0.5, y0=-0.5, x1=4 * i - 0.5, y1=7.5, line_width=4, line_color=GREY)
 
     for i in range(0, 9):
         fig.add_hline(y=i - 0.5, line_width=4, line_color=GREY)
@@ -579,8 +579,8 @@ def create_heatmap_icp(organ_distances, differences, click_data, center_click_da
     layout = go.Layout(font=dict(size=20, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)',
                        margin=dict(t=80, b=70, l=90, r=81), plot_bgcolor='rgba(50,50,50,1)', height=340,
                        showlegend=True, title=dict(text="Difference of patients' organs positions after ICP "
-                                                        "aligning to the bones", font=dict(size=18, color='lightgrey')),
-                       uirevision="foo")
+                                                        "aligning to the bones", font=dict(size=18, color='lightgrey'),
+                                                   ), uirevision=scale)
 
     data, custom_data, hover_text = create_data_for_heatmap(True)
 
@@ -631,9 +631,10 @@ def create_heatmap_icp(organ_distances, differences, click_data, center_click_da
     Input("average-distances", "clickData"),
     Input("organ-distances", "clickData"),
     Input("rotations-graph", "clickData"),
-    Input("scale-heatmap", "value"))
+    Input("scale-heatmap", "value"),
+    Input("heatmap-center", "relayoutData"))
 def create_heatmap_centering(click_data, icp_click_data, differences, average_distances, organ_distances,
-                             rotations_graph, scale):
+                             rotations_graph, scale, zoom):
     """
     Creates the heatmap_center graph which depicts every patient and their every organ movement after centering on
     the prostate registration method.
@@ -649,10 +650,10 @@ def create_heatmap_centering(click_data, icp_click_data, differences, average_di
     global patient_id
 
     layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)',
-                       margin=dict(t=80, b=70, l=90, r=81), plot_bgcolor='rgba(50,50,50,1)', height=340,
+                       margin=dict(t=100, b=70, l=90, r=81), plot_bgcolor='rgba(50,50,50,1)', height=340,
                        showlegend=True, title=dict(text="Difference of patients' organs positions after centering on "
-                                                        "prostate",
-                                                   font=dict(size=18, color='lightgrey')), uirevision="foo")
+                                                        "prostate", font=dict(size=18, color='lightgrey')),
+                       uirevision=scale)
 
     data, custom_data, hover_text = create_data_for_heatmap(False)
 
@@ -682,7 +683,8 @@ def create_heatmap_centering(click_data, icp_click_data, differences, average_di
         data = click_data["points"][0]
         decide_heatmap_highlights(fig, data, click_id)
 
-    create_heatmap_annotations(fig)
+    if len(zoom) <= 1 or "xaxis.autorange" in zoom.keys():
+        add_heatmap_annotations(fig)
 
     fig.update_xaxes(title_text="Timestamp", ticktext=TIMESTAMPS, tickmode="array", tickvals=np.arange(1.5, 52, 4),
                      zeroline=False, showgrid=False, range=[-0.55, 51.55])
@@ -691,6 +693,16 @@ def create_heatmap_centering(click_data, icp_click_data, differences, average_di
     fig.update_layout(title_x=0.5, font=dict(size=16), title_y=0.90, legend={"x": 0.73, "y": 1.14, "orientation": "h",
                                                                              "xanchor": "left"})
     return fig
+
+
+def add_heatmap_annotations(fig):
+    fig.add_layout_image(dict(source=app.get_asset_url("annot_heatmap1.png"),
+                              xref="paper", yref="paper", x=0, y=1, sizex=1, sizey=1,
+                              xanchor="left", yanchor="bottom"))
+
+    fig.add_layout_image(dict(source=app.get_asset_url("legend_heatmap1.png"),
+                              xref="paper", yref="paper", x=1.084, y=1.15, sizex=0.35, sizey=0.35,
+                              xanchor="right", yanchor="bottom"))
 
 
 def create_heatmap_annotations(fig):
@@ -1054,7 +1066,7 @@ def create_graph_slices(x_slider, y_slider, z_slider, organs, method, mode,
     for i in range(3):
         layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)', height=280,
                            width=320, plot_bgcolor='rgba(50,50,50,1)', margin=dict(l=40, r=30, t=60, b=60),
-                           showlegend=False, title=dict(text=names[i]))
+                           showlegend=False, title=dict(text=names[i], y=0.9))
         fig = go.Figure(layout=layout)
         fig.update_layout(title_x=0.5)
         figures.append(fig)

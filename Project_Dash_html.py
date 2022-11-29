@@ -41,14 +41,16 @@ layout = html.Div(className="row", children=[
         click on one chart and see the data highlighted in other charts. For example, in the first heatmap, 
         by clicking on the first cell in line with number 722, all graphs in the individual patient section will show 
         the patient number 722 instead of the number 137 displayed by default.""",
-                style={"margin-left": "40px", "margin-right": "40px", "margin-top": "10px", "margin-bottom": "10px",
-                       "color": "#081e5e", "font-size": "15pt", "background-color": constants.LIGHT_GREY,
-                       "border-radius": "5px",
-                       "padding": "10px 30px 10px 30px"}),
+                     style={"margin-left": "40px", "margin-right": "40px", "margin-top": "10px",
+                            "margin-bottom": "10px",
+                            "color": "#081e5e", "font-size": "15pt", "background-color": constants.LIGHT_GREY,
+                            "border-radius": "5px",
+                            "padding": "10px 30px 10px 30px"}),
 
         html.H6("Patients overview section", style={"margin": "20px 40px 20px 40px", "color": "#171717", "font-size":
-                "20pt", "font-family": "Bahnschrift", 'font-weight': 'bold', "background-color": constants.LIGHT_GREEN,
-                "border-radius": "5px", "padding": "10px 0px 10px 0px", "text-align": "center"}),
+            "20pt", "font-family": "Bahnschrift", 'font-weight': 'bold', "background-color": constants.LIGHT_GREEN,
+                                                    "border-radius": "5px", "padding": "10px 0px 10px 0px",
+                                                    "text-align": "center"}),
 
         # AVERAGES ------------------------------------------------------------------------------------------
 
@@ -66,8 +68,8 @@ layout = html.Div(className="row", children=[
                            style={'display': 'inline-block', "font-size": "18px"})]),
 
         html.Div(style={'textAlign': 'center'}, children=[
-            dcc.Graph(id="average-distances", style={'display': 'inline-block', "width": "95%",
-                                                     "padding": "20px 0px 20px 0px"})]),
+            dcc.Graph(id="average-distances", config=dict(modeBarButtonsToRemove=constants.MODEBAR),
+                      style={'display': 'inline-block', "width": "95%", "padding": "20px 0px 20px 0px"})]),
 
         # HEATMAPS ---------------------------------------------------------------------------------------------------
 
@@ -86,10 +88,11 @@ layout = html.Div(className="row", children=[
                            style={'display': 'inline-block', "font-size": "18px"})]),
 
         html.Div(style={'textAlign': 'center'}, children=[
-            dcc.Graph(id="heatmap-icp", style={'display': 'inline-block', "padding": "20px 0px 10px 0px",
-                                               "width": "95%"})]),
+            dcc.Graph(id="heatmap-icp", config=dict(modeBarButtonsToRemove=['resetScale2d']),
+                      style={'display': 'inline-block', "padding": "20px 0px 10px 0px",
+                             "width": "95%"})]),
         html.Div(style={'textAlign': 'center'}, children=[
-            dcc.Graph(id="heatmap-center",
+            dcc.Graph(id="heatmap-center", config=dict(modeBarButtonsToRemove=constants.MODEBAR),
                       style={'display': 'inline-block', "padding": "0px 0px 20px 0px", "width": "95%"})]),
 
         html.H6("Individual patient section",
@@ -114,8 +117,8 @@ layout = html.Div(className="row", children=[
 
     html.Div(className="row", children=[
         html.Div(style={'textAlign': 'center'}, children=[
-            dcc.Graph(id="organ-distances", style={'display': 'inline-block', "padding": "20px 40px 20px 40px",
-                                                   "width": "95%"})]),
+            dcc.Graph(id="organ-distances", config=dict(modeBarButtonsToRemove=constants.MODEBAR),
+                      style={'display': 'inline-block', "padding": "20px 40px 20px 40px", "width": "95%"})]),
 
         # DIFFERENCES GRAPH -----------------------------------------------------------------------------------------
 
@@ -127,7 +130,7 @@ layout = html.Div(className="row", children=[
                        "padding": "10px 30px 10px 30px"}),
 
         html.Div(className="row", style={'textAlign': 'center'}, children=[
-            dcc.Graph(id="alignment-differences",
+            dcc.Graph(id="alignment-differences", config=dict(modeBarButtonsToRemove=constants.MODEBAR),
                       style={"padding": "20px 40px 30px 40px", 'display': 'inline-block', "width": "95%"})])]),
 
     # ROTATIONS GRAPH -----------------------------------------------------------------------------------------------
@@ -139,7 +142,8 @@ layout = html.Div(className="row", children=[
                    "padding": "10px 30px 10px 30px"}),
 
     html.Div(className="row", style={'textAlign': 'center'}, children=[
-        dcc.Graph(id="rotations-graph", style={"padding": "20px 40px 10px 40px", "width": "95%"})]),
+        dcc.Graph(id="rotations-graph", config=dict(modeBarButtonsToRemove=constants.MODEBAR),
+                  style={"padding": "20px 40px 10px 40px", "width": "95%"})]),
 
     html.H6("Timestamp section",
             style={"margin": "20px 40px 20px 40px", "color": "#171717",
@@ -192,7 +196,7 @@ layout = html.Div(className="row", children=[
                               id="organs-checklist",
                               style={'display': 'inline-block', "font-size": "18px", "padding": "0px 0px 0px 25px"}),
 
-                dcc.Graph(id="main-graph"),
+                dcc.Graph(id="main-graph", config=dict(modeBarButtonsToRemove=constants.D3_MODEBAR)),
             ]),
 
             # SLICES ---------------------------------------------------------------------------------------------
@@ -201,19 +205,19 @@ layout = html.Div(className="row", children=[
                                                      "justify-content": "space-evenly",
                                                      "margin": "20px 0px 0px 45px"}, children=[
 
-                dcc.Graph(id="rotations-axes"),
+                dcc.Graph(id="rotations-axes", config=dict(modeBarButtonsToRemove=constants.D3_MODEBAR+["pan3d"])),
 
                 html.Div(id="x-slice", children=[
                     dcc.Slider(min=0, max=1, value=0.5, id="x-slice-slider", marks=None),
-                    dcc.Graph(id="x-slice-graph")]),
+                    dcc.Graph(id="x-slice-graph", config=dict(modeBarButtonsToRemove=constants.MODEBAR))]),
 
                 html.Div(style={"padding": "20px 0px 50px 0px"}, children=[
                     dcc.Slider(min=0, max=1, value=0.5, id="y-slice-slider", marks=None),
-                    dcc.Graph(id="y-slice-graph")]),
+                    dcc.Graph(id="y-slice-graph", config=dict(modeBarButtonsToRemove=constants.MODEBAR))]),
 
                 html.Div(style={"padding": "20px 0px 50px 0px"}, children=[
                     dcc.Slider(min=0, max=1, value=0.5, id="z-slice-slider", marks=None),
-                    dcc.Graph(id="z-slice-graph")])
+                    dcc.Graph(id="z-slice-graph", config=dict(modeBarButtonsToRemove=constants.MODEBAR))])
             ])
         ])
     ]),

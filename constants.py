@@ -103,3 +103,7 @@ COLORSCALE_ORN = [[0.00, '#4D2102'],
 
 CONE_TIP = 0.1
 CONE_START = 0.9
+
+MODEBAR = ["autoScale2d", "lasso2d", "toImage", "select2d", "zoomOut2d", "zoomIn2d"]
+
+D3_MODEBAR = ["toImage", "orbitRotation", "resetCameraDefault3d"]
