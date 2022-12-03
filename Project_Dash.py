@@ -99,13 +99,13 @@ def options_visibility(mode):
                {'display': 'inline-block', "width": "60px",
                 "height": "30px", "font-size": "16px", "padding": "0px 0px 0px 30px"}, \
                {"padding": "20px 0px 0px 45x", "display": "inline-block",
-                "margin": "20px 0px 20px 45px", "height": "550px"}, {"padding": "137px 0px 0px 0px"}, \
+                "margin": "20px 0px 10px 45px", "height": "550px"}, {"padding": "137px 0px 0px 0px"}, \
                {"padding": "99px 0px 0px 0px"}
 
     else:
         return {'display': 'none'}, {'display': 'none'}, {'display': 'none'}, {'display': 'none'}, \
                {'display': 'none'}, {"padding": "20px 0px 0px 45x", "display": "inline-block",
-                                     "margin": "14px 0px 20px 45px", "height": "562px"}, \
+                                     "margin": "14px 0px 10px 45px", "height": "562px"}, \
                {"padding": "50px 0px 0px 0px"}, {"padding": "12px 0px 0px 0px"}
 
 
@@ -243,7 +243,7 @@ def make_organ_distances_figure(colors_icp, sizes_icp, colors_center, sizes_cent
     fig = make_subplots(rows=1, cols=2, horizontal_spacing=0.1,
                         subplot_titles=(
                             "Distances of ICP aligned organs and the plan organs of patient {}".format(patient_id),
-                            "Distances of the centred organs and the plan organs of patient {}".format(patient_id)))
+                            "Distances of the prostate centred organs and the plan organs of patient {}".format(patient_id)))
 
     fig.add_trace(go.Scattergl(x=np.array(range(1, 14)), y=prostate, mode="lines+markers", name="Prostate",
                                marker=dict(color=LIGHT_BLUE, symbol="x", size=13,
@@ -350,15 +350,15 @@ def create_distances_between_alignments(differences, organ_distances, average_di
 
     layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)',
                        margin=dict(t=80, b=70, l=90, r=40),
-                       plot_bgcolor='rgba(70,70,70,1)', height=350, title=dict(
-            text="Differences of distances between the alignments of patient {}".format(patient_id),
+                       plot_bgcolor='rgba(70,70,70,1)', height=370, title=dict(
+            text="Differences of distances between the registration methods of patient {}".format(patient_id),
             font=dict(size=18, color='lightgrey')), uirevision=patient_id)
     fig = go.Figure(layout=layout)
     fig.add_trace(go.Bar(x=np.array(range(1, 14)), y=bladder, name="Bladder", marker=dict(color=colors[0])))
     fig.add_trace(go.Bar(x=np.array(range(1, 14)), y=rectum, name="Rectum", marker=dict(color=colors[1])))
 
     fig.update_xaxes(title_text="Timestamp", tick0=0, dtick=1)
-    fig.update_yaxes(title_text="  Distance centre | ICP [mm]")
+    fig.update_yaxes(title_text="    Prostate centring | ICP distance [mm]", title_font={"size": 17})
     fig.update_layout(title_x=0.5, font=dict(size=15), title_y=0.90)
 
     return fig
@@ -370,15 +370,20 @@ def create_distances_between_alignments(differences, organ_distances, average_di
     Input("heatmap-icp", "clickData"),
     Input("heatmap-center", "clickData"),
     Input("organ-distances", "clickData"),
-    Input("alignment-differences", "clickData"))
-def create_rotation_icp_graph(rotations_graph, heatmap_icp, heatmap_center, organ_distances, differences):
+    Input("alignment-differences", "clickData"),
+    Input("average-distances", "clickData"))
+def create_rotation_icp_graph(rotations_graph, heatmap_icp, heatmap_center, organ_distances, differences, avrg):
     colors = [[CYAN1] * 13, [CYAN2] * 13, [CYAN3] * 13]
     all_click_data = [rotations_graph, heatmap_icp, heatmap_center, organ_distances, differences]
     all_ids = ["rotations-graph", "heatmap-icp", "heatmap-center", "organ-distances", "alignment-differences"]
     click_data, click_id = resolve_click_data(all_click_data, all_ids)
 
     if click_data:
-        colors[0][timestamp_i], colors[1][timestamp_i], colors[2][timestamp_i] = "white", "white", "white"
+        if "rotations" not in click_id:
+            colors[0][timestamp_i], colors[1][timestamp_i], colors[2][timestamp_i] = "white", "white", "white"
+        else:
+            data = click_data["points"][0]
+            colors[int(data["curveNumber"])][timestamp_i] = "white"
 
     rot_x, rot_y, rot_z = rotations[PATIENTS.index(patient_id)][0]
 
@@ -498,7 +503,7 @@ def create_average_distances(differences, organ_distances, click_data, heatmap_i
 def make_averages_figure(colors_icp, sizes_icp, colors_center, sizes_center):
     fig = make_subplots(rows=1, cols=2, horizontal_spacing=0.1,
                         subplot_titles=("Average difference of patients' organs positions after ICP aligning",
-                                        "Average difference of patients' organs positions after centering on prostate"))
+                                        "Average difference of patients' organs positions after prostate centring"))
 
     fig.add_trace(go.Scattergl(x=PATIENTS, y=avrg_prostate_icp, mode="markers", name="Prostate",
                                marker=dict(symbol="x", color=LIGHT_BLUE, size=13,
@@ -558,11 +563,11 @@ def create_lines_for_heatmaps(fig):
     Input("heatmap-icp", "clickData"),
     Input("heatmap-center", "clickData"),
     Input("average-distances", "clickData"),
-
     Input("rotations-graph", "clickData"),
-    Input("scale-heatmap", "value"))
+    Input("scale-heatmap", "value"),
+    Input("heatmap-icp", "relayoutData"))
 def create_heatmap_icp(organ_distances, differences, click_data, center_click_data, average_distances,
-                       rotations_graph, scale):
+                       rotations_graph, scale, zoom):
     """
     Creates the heatmap_icp graph which depicts every patient and their every organ movement after icp aligning.
     :param organ_distances: clickData from the organ_distances graph
@@ -577,7 +582,7 @@ def create_heatmap_icp(organ_distances, differences, click_data, center_click_da
     global patient_id
 
     layout = go.Layout(font=dict(size=20, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)',
-                       margin=dict(t=80, b=70, l=90, r=81), plot_bgcolor='rgba(50,50,50,1)', height=340,
+                       margin=dict(t=100, b=70, l=90, r=81), plot_bgcolor='rgba(50,50,50,1)', height=340,
                        showlegend=True, title=dict(text="Difference of patients' organs positions after ICP "
                                                         "aligning to the bones", font=dict(size=18, color='lightgrey'),
                                                    ), uirevision=scale)
@@ -611,7 +616,8 @@ def create_heatmap_icp(organ_distances, differences, click_data, center_click_da
         data = click_data["points"][0]
         decide_heatmap_highlights(fig, data, click_id)
 
-    create_heatmap_annotations(fig)
+    if not zoom or len(zoom) <= 1 or "xaxis.autorange" in zoom.keys():
+        add_heatmap_annotations(fig)
 
     fig.update_xaxes(title_text="Timestamp", ticktext=TIMESTAMPS, tickmode="array", tickvals=np.arange(1.5, 52, 4),
                      zeroline=False, showgrid=False, range=[-0.55, 51.55])
@@ -651,8 +657,8 @@ def create_heatmap_centering(click_data, icp_click_data, differences, average_di
 
     layout = go.Layout(font=dict(size=12, color='darkgrey'), paper_bgcolor='rgba(50,50,50,1)',
                        margin=dict(t=100, b=70, l=90, r=81), plot_bgcolor='rgba(50,50,50,1)', height=340,
-                       showlegend=True, title=dict(text="Difference of patients' organs positions after centering on "
-                                                        "prostate", font=dict(size=18, color='lightgrey')),
+                       showlegend=True, title=dict(text="Difference of patients' organs positions after prostate "
+                                                        "centring", font=dict(size=18, color='lightgrey')),
                        uirevision=scale)
 
     data, custom_data, hover_text = create_data_for_heatmap(False)
@@ -683,7 +689,7 @@ def create_heatmap_centering(click_data, icp_click_data, differences, average_di
         data = click_data["points"][0]
         decide_heatmap_highlights(fig, data, click_id)
 
-    if len(zoom) <= 1 or "xaxis.autorange" in zoom.keys():
+    if not zoom or len(zoom) <= 1 or "xaxis.autorange" in zoom.keys():
         add_heatmap_annotations(fig)
 
     fig.update_xaxes(title_text="Timestamp", ticktext=TIMESTAMPS, tickmode="array", tickvals=np.arange(1.5, 52, 4),
@@ -890,7 +896,6 @@ def create_3dgraph(method, organs, mode, fst_timestamp, snd_timestamp, heatmap_i
     :param method: ICP or prostate aligning registration method
     :param organs: organs selected by the user
     :param mode: showing either Plan organs or organ in the Two timestamps
-    :param mov: showing either all of the movement vectors, only yhe average ones or none
     :return: the 3d figure
     """
     fst_timestamp = "_plan" if fst_timestamp == "plan" else fst_timestamp
@@ -942,7 +947,6 @@ def decide_3d_graph_mode(mode, fig, method, organs, fst_timestamp, snd_timestamp
     :param method: ICP or prostate aligning registration method
     :param organs: organs selected by the user
     :param mode: showing either Plan organs or organ in the Two timestamps
-    :param mov: showing either all of the movement vectors, only yhe average ones or none
     :return: created meshes
     """
     fst_meshes, snd_meshes = [], []

@@ -88,7 +88,7 @@ layout = html.Div(className="row", children=[
                            style={'display': 'inline-block', "font-size": "18px"})]),
 
         html.Div(style={'textAlign': 'center'}, children=[
-            dcc.Graph(id="heatmap-icp", config=dict(modeBarButtonsToRemove=['resetScale2d']),
+            dcc.Graph(id="heatmap-icp", config=dict(modeBarButtonsToRemove=constants.MODEBAR),
                       style={'display': 'inline-block', "padding": "20px 0px 10px 0px",
                              "width": "95%"})]),
         html.Div(style={'textAlign': 'center'}, children=[
@@ -187,7 +187,7 @@ layout = html.Div(className="row", children=[
 
                 html.H6("Select the method of alignment:",
                         style={'display': 'inline-block', "padding": "0px 50px 0px 45px"}, id="method"),
-                dcc.RadioItems(options=["ICP", "Center point"], value="ICP", inline=True, id="alignment-radioitems",
+                dcc.RadioItems(options=["ICP", "Prostate Centring"], value="ICP", inline=True, id="alignment-radioitems",
                                style={'display': 'inline-block', "font-size": "18px", "padding": "0px 100px 0px 12px"}),
 
                 html.H6("Select the visibility of organs/bones:",
@@ -211,11 +211,11 @@ layout = html.Div(className="row", children=[
                     dcc.Slider(min=0, max=1, value=0.5, id="x-slice-slider", marks=None),
                     dcc.Graph(id="x-slice-graph", config=dict(modeBarButtonsToRemove=constants.MODEBAR))]),
 
-                html.Div(style={"padding": "20px 0px 50px 0px"}, children=[
+                html.Div(style={"padding": "20px 0px 10px 0px"}, children=[
                     dcc.Slider(min=0, max=1, value=0.5, id="y-slice-slider", marks=None),
                     dcc.Graph(id="y-slice-graph", config=dict(modeBarButtonsToRemove=constants.MODEBAR))]),
 
-                html.Div(style={"padding": "20px 0px 50px 0px"}, children=[
+                html.Div(style={"padding": "20px 0px 10px 0px"}, children=[
                     dcc.Slider(min=0, max=1, value=0.5, id="z-slice-slider", marks=None),
                     dcc.Graph(id="z-slice-graph", config=dict(modeBarButtonsToRemove=constants.MODEBAR))])
             ])
