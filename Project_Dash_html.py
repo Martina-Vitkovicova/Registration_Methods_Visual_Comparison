@@ -48,7 +48,7 @@ layout = html.Div(className="row", children=[
                             "padding": "10px 30px 10px 30px"}),
 
         html.H6("Patients overview section", style={"margin": "20px 40px 20px 40px", "color": "#171717", "font-size":
-            "20pt", "font-family": "Bahnschrift", 'font-weight': 'bold', "background-color": constants.LIGHT_GREEN,
+                "20pt", "font-family": "Bahnschrift", 'font-weight': 'bold', "background-color": constants.LIGHT_GREEN,
                                                     "border-radius": "5px", "padding": "10px 0px 10px 0px",
                                                     "text-align": "center"}),
 
@@ -187,7 +187,8 @@ layout = html.Div(className="row", children=[
 
                 html.H6("Select the method of alignment:",
                         style={'display': 'inline-block', "padding": "0px 50px 0px 45px"}, id="method"),
-                dcc.RadioItems(options=["ICP", "Prostate Centring"], value="ICP", inline=True, id="alignment-radioitems",
+                dcc.RadioItems(options=["ICP", "Prostate Centring"], value="ICP", inline=True,
+                               id="alignment-radioitems",
                                style={'display': 'inline-block', "font-size": "18px", "padding": "0px 100px 0px 12px"}),
 
                 html.H6("Select the visibility of organs/bones:",
@@ -199,13 +200,13 @@ layout = html.Div(className="row", children=[
                 dcc.Graph(id="main-graph", config=dict(modeBarButtonsToRemove=constants.D3_MODEBAR)),
             ]),
 
-            # SLICES ---------------------------------------------------------------------------------------------
+            # SLICES & 3D ROTATION -----------------------------------------------------------------------------------
 
             html.Div(className='six columns', style={"display": "flex", "flex-wrap": "wrap",
                                                      "justify-content": "space-evenly",
                                                      "margin": "20px 0px 0px 45px"}, children=[
 
-                dcc.Graph(id="rotations-axes", config=dict(modeBarButtonsToRemove=constants.D3_MODEBAR+["pan3d"])),
+                dcc.Graph(id="rotations-axes", config=dict(modeBarButtonsToRemove=constants.D3_MODEBAR + ["pan3d"])),
 
                 html.Div(id="x-slice", children=[
                     dcc.Slider(min=0, max=1, value=0.5, id="x-slice-slider", marks=None),
