@@ -1,3 +1,19 @@
+import math
+import os
+from copy import deepcopy
+
+import numpy
+
+import time
+
+import numpy as np
+import trimesh
+from scipy.spatial.transform import Rotation
+
+from registration_methods import import_obj, create_translation_matrix, vertices_transformation
+from constants import FILEPATH
+
+
 def visualize(object_list, align=False):
     """
     Use trimesh library to visualize the objects from the object_list
@@ -128,7 +144,6 @@ def write_center_movements(plan):
             file.write("x: {}, y: {}, z: {}\n".format(translation_m[0], translation_m[1], translation_m[2]))
 
 
-
 def write_icp_movements(plan):
     """
     Function that writes to two files translation and rotation matrices between plan bones and bones in different
@@ -159,6 +174,10 @@ def write_icp_center_movements(plan):
             translation_m = numpy.array([matrix[0][3], matrix[1][3], matrix[2][3]])
 
             file.write("x: {}, y: {}, z: {}\n".format(translation_m[0], translation_m[1], translation_m[2]))
+
+
+def icp_transformation_matrices(param, param1):
+    pass
 
 
 def compute_distances_after_icp(patient):
@@ -251,7 +270,7 @@ def compute_prostate_center_distances(plan):
     for entry in os.listdir(FILEPATH + "\\137_prostate"):
         prostates = import_obj([FILEPATH + "\\137_prostate\\{}".format(entry)])
         prost_center = find_center_point(prostates[0][0])
-        distances.append(numpy.linalg.norm(numpy.array(plan_prostate_center) - numpy.array(prost_center)))
+        distances.append(np.linalg.norm(np.array(plan_prostate_center) - np.array(prost_center)))
 
     return distances
 
@@ -261,7 +280,7 @@ def icp_rot_vec(other, key):
     rotation_m = np.array([matrix[0][:3], matrix[1][:3], matrix[2][:3]])
     translation_m = np.array([matrix[0][3], matrix[1][3], matrix[2][3]])
 
-    rot_vec = R.from_matrix(rotation_m).as_rotvec()
+    rot_vec = Rotation.from_matrix(rotation_m).as_rotvec()
 
     return matrix, rot_vec
 
@@ -274,3 +293,14 @@ def print_matrix_info(rotation_m, translation_m):
     print("Translation on x axis: {}".format(translation_m[0]))
     print("Translation on y axis: {}".format(translation_m[1]))
     print("Translation on z axis: {}".format(translation_m[2]))
+
+
+def icp_transformation_matrix(other, key):
+    """Create transformation matrix using icp algorithm from trimesh library"""
+    matrix, transformed, _ = trimesh.registration.icp(other, key, scale=False)
+    rotation_m = np.array([matrix[0][:3], matrix[1][:3], matrix[2][:3]])
+    translation_m = np.array([matrix[0][3], matrix[1][3], matrix[2][3]])
+
+    rotation_m = list(Rotation.from_matrix(rotation_m).as_euler('xyz', degrees=True))
+
+    return matrix

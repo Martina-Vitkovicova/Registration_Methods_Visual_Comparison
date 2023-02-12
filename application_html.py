@@ -216,7 +216,7 @@ layout = html.Div(className="row", children=[
                     dcc.Slider(min=0, max=1, value=0.5, id="y-slice-slider", marks=None),
                     dcc.Graph(id="y-slice-graph", config=dict(modeBarButtonsToRemove=constants.MODEBAR))]),
 
-                html.Div(style={"padding": "20px 0px 10px 0px"}, children=[
+                html.Div(style={"padding": "20px 0px 150px 0px"}, children=[
                     dcc.Slider(min=0, max=1, value=0.5, id="z-slice-slider", marks=None),
                     dcc.Graph(id="z-slice-graph", config=dict(modeBarButtonsToRemove=constants.MODEBAR))])
             ])

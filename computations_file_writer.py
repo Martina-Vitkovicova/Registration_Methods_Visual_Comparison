@@ -3,7 +3,7 @@ import trimesh.registration
 import numpy
 from scipy.spatial.transform import Rotation as R
 
-import Project_2
+import registration_methods
 import json
 import constants
 

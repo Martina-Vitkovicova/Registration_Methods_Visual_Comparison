@@ -4,8 +4,6 @@ import pywavefront
 from scipy.spatial.transform import Rotation
 from constants import FILEPATH
 
-"""Note: Registration method = RM"""
-
 
 def import_obj(files):
     """Create a list of vertices and faces from the .obj files."""

@@ -1,4 +1,4 @@
-import Project_2
+import registration_methods
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
 from kivy.properties import ObjectProperty

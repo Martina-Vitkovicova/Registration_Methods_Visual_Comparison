@@ -234,3 +234,25 @@ def average_center(differences, organ_distances, icp_click_data, click_data, hea
     fig.update_yaxes(title_text="Average distance [mm]", autorange=False)
 
     return fig
+
+
+def create_heatmap_annotations(fig):
+    fig.add_trace(go.Scatter(x=list(range(0, 13 * 4, 4)), y=[8] * 13, mode="markers", name="Bones",
+                             marker=dict(symbol="circle", color=constants.PURPLE, size=10), hoverinfo="skip"))
+    fig.add_trace(go.Scatter(x=list(range(1, 13 * 4, 4)), y=[8] * 13, mode="markers", name="Prostate",
+                             marker=dict(symbol="x", color=constants.LIGHT_BLUE, size=10), hoverinfo="skip"))
+    fig.add_trace(go.Scatter(x=list(range(2, 13 * 4, 4)), y=[8] * 13, mode="markers", name="Bladder",
+                             marker=dict(symbol="square", color=constants.GREEN, size=10), hoverinfo="skip"))
+    fig.add_trace(go.Scatter(x=list(range(3, 13 * 4, 4)), y=[8] * 13, mode="markers", name="Rectum",
+                             marker=dict(symbol="diamond", color=constants.RED, size=10), hoverinfo="skip"))
+
+
+
+def add_planes(point, normal):
+    d = -point.dot(normal)
+    xx, yy = np.meshgrid(range(10), range(10))
+    z = (-normal[0] * xx - normal[1] * yy - d) * 1. / normal[2]
+
+    fig = go.Surface(x=xx, y=yy, z=z)
+
+    return fig

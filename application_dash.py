@@ -4,8 +4,8 @@ import logging
 import numpy as np
 import plotly.graph_objects as go
 import constants
-import Project_2
-import Project_Dash_html
+import registration_methods
+import application_html
 from copy import deepcopy
 from plotly.subplots import make_subplots
 from dash import Dash, Output, Input, callback_context, ctx
@@ -13,11 +13,11 @@ from constants import FILEPATH, PATIENTS, TIMESTAMPS
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 app = Dash(__name__, external_stylesheets=external_stylesheets)
-app.layout = Project_Dash_html.layout
+app.layout = application_html.layout
 
 # enable only console writing errors
-log = logging.getLogger('werkzeug')
-log.setLevel(logging.ERROR)
+# log = logging.getLogger('werkzeug')
+# log.setLevel(logging.ERROR)
 
 # global variables used to propagate values from one graph to the others
 patient_id = "137"
@@ -43,9 +43,6 @@ with open("computations_files/center_distances_c.txt", "r") as center_dist, \
 
 with open("computations_files/rotation_icp.txt", "r") as rotations_icp:
     rotations = json.load(rotations_icp)
-
-with open("computations_files/plan_center_points.txt", "r") as center_points:
-    plan_center_points = json.load(center_points)
 
 
 def create_meshes_from_objs(objects, color):
@@ -991,8 +988,8 @@ def import_selected_organs(organs, time_or_plan, patient):
     """
     objects = []
     for organ in organs:
-        objects.extend(Project_2.import_obj([FILEPATH + "{}\\{}\\{}{}.obj"
-                                            .format(patient, organ.lower(), organ.lower(), time_or_plan)]))
+        objects.extend(registration_methods.import_obj([FILEPATH + "{}\\{}\\{}{}.obj"
+                                                       .format(patient, organ.lower(), organ.lower(), time_or_plan)]))
     return objects
 
 
@@ -1065,11 +1062,11 @@ def get_meshes_after_icp(timestamp, objects, patient, color=constants.PINK):
     :return: meshes after aligning
     """
 
-    plan_bones = Project_2.import_obj([FILEPATH + "{}\\bones\\bones_plan.obj".format(patient)])
-    bones = Project_2.import_obj([FILEPATH + "{}\\bones\\bones{}.obj".format(patient, timestamp)])
+    plan_bones = registration_methods.import_obj([FILEPATH + "{}\\bones\\bones_plan.obj".format(patient)])
+    bones = registration_methods.import_obj([FILEPATH + "{}\\bones\\bones{}.obj".format(patient, timestamp)])
 
-    transform_matrix = Project_2.icp_transformation_matrix(bones[0][0], plan_bones[0][0])
-    transfr_objects = Project_2.vertices_transformation(transform_matrix, deepcopy(objects))
+    transform_matrix = registration_methods.icp_transformation_matrix(bones[0][0], plan_bones[0][0])
+    transfr_objects = registration_methods.vertices_transformation(transform_matrix, deepcopy(objects))
     after_icp_meshes = create_meshes_from_objs(transfr_objects, color)
 
     return after_icp_meshes
@@ -1085,13 +1082,13 @@ def get_meshes_after_centering(timestamp, objects, patient, color=constants.PURP
     :return: meshes after aligning
     """
 
-    prostate = Project_2.import_obj([FILEPATH + "{}\\prostate\\prostate{}.obj".format(patient, timestamp)])
-    plan_center = Project_2.find_center_of_mass(Project_2.import_obj(
+    prostate = registration_methods.import_obj([FILEPATH + "{}\\prostate\\prostate{}.obj".format(patient, timestamp)])
+    plan_center = registration_methods.find_center_of_mass(registration_methods.import_obj(
         [FILEPATH + "{}\\prostate\\prostate_plan.obj".format(patient)])[0][0])
-    other_center = Project_2.find_center_of_mass(prostate[0][0])
+    other_center = registration_methods.find_center_of_mass(prostate[0][0])
 
-    center_matrix = Project_2.create_translation_matrix(plan_center, other_center)
-    center_transfr_objects = Project_2.vertices_transformation(center_matrix, deepcopy(objects))
+    center_matrix = registration_methods.create_translation_matrix(plan_center, other_center)
+    center_transfr_objects = registration_methods.vertices_transformation(center_matrix, deepcopy(objects))
     after_center_meshes = create_meshes_from_objs(center_transfr_objects, color)
 
     return after_center_meshes
@@ -1162,17 +1159,17 @@ def two_slices_mode(method, patient, organs, timestamp):
     :return: aligned meshes
     """
     if "ICP" in method:
-        plan_bones = Project_2.import_obj([FILEPATH + "{}\\bones\\bones_plan.obj".format(patient)])
-        bones = Project_2.import_obj([FILEPATH + "{}\\bones\\bones{}.obj".format(patient, timestamp)])
-        icp_matrix = Project_2.icp_transformation_matrix(bones[0][0], plan_bones[0][0])
+        plan_bones = registration_methods.import_obj([FILEPATH + "{}\\bones\\bones_plan.obj".format(patient)])
+        bones = registration_methods.import_obj([FILEPATH + "{}\\bones\\bones{}.obj".format(patient, timestamp)])
+        icp_matrix = registration_methods.icp_transformation_matrix(bones[0][0], plan_bones[0][0])
         meshes = selected_organs_slices(icp_matrix, patient, organs, timestamp)
 
     else:
         plan_prostate = trimesh.load_mesh(FILEPATH + "{}\\prostate\\prostate_plan.obj".format(patient))
         prostate = trimesh.load_mesh(FILEPATH + "{}\\prostate\\prostate{}.obj".format(patient, timestamp))
-        key_center = Project_2.find_center_of_mass(plan_prostate.vertices)
-        other_center = Project_2.find_center_of_mass(prostate.vertices)
-        center_matrix = Project_2.create_translation_matrix(key_center, other_center)
+        key_center = registration_methods.find_center_of_mass(plan_prostate.vertices)
+        other_center = registration_methods.find_center_of_mass(prostate.vertices)
+        center_matrix = registration_methods.create_translation_matrix(key_center, other_center)
         meshes = selected_organs_slices(center_matrix, patient, organs, timestamp)
 
     return meshes

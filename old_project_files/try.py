@@ -6,7 +6,7 @@ import math
 import numpy as np
 from constants import *
 from plotly.subplots import make_subplots
-from Project_Dash import patient_id, all_distances_icp, all_distances_center
+from application_dash import patient_id, all_distances_icp, all_distances_center
 
 app = dash.Dash(__name__)
 server = app.server
