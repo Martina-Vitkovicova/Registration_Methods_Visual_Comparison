@@ -1,4 +1,9 @@
-FILEPATH = "C:\\Users\\vitko\\Desktop\\ProjetHCI-BT\\BT_implementation\\Organs\\"
+# In order for the application to render all graphs, the FILEPATH constant have to be changed
+# according to the directory containing the confidential medical data.
+# for example: "C:\\Users\\foo\\Desktop\\application_implementation\\data"
+
+FILEPATH = ""
+
 
 PATIENTS = ["137", "146", "148", "198", "489", "579", "716", "722"]
 TIMESTAMPS = list(range(1, 14))
