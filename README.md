@@ -1,20 +1,79 @@
-The setup and information: 
+# Registration Methods – Visual Comparison
 
-In order to run the application, you need to have the **registration_methods.py**, **application_dash.py**,
-**application_html.py**, **constants.py** scripts and **assets** directory downloaded. <br>
-The application is based on private prostate cancer patients' data*,
-which is why we can not share it along with the other files.
-Although we add at least the **computations_files** directory, containing the precomputed data for the majority of graphs. 
-Only the last section of the application - the timestamp section -- does not work without the private data. <br>
-After downloading all the materials and placing them in one directory, 
-the constant **FILEPATH** in the constants.py file needs to be changed according to the location of that directory. <br>
-The last step of the setup is the import of necessary libraries: **numpy, trimesh, pywavefront, scipy, plotly, dash, json and copy**.
-After that, you can start the application by *running the application_dash.py* script. <br>
+Interactive Python application for comparing two registration methods used in
+prostate cancer radiotherapy:
 
+- **ICP (Iterative Closest Point) registration**
+- **Prostate-centering registration**
 
-*The data is structured in a way that every patient has their own directory named by their ID. <br>
-In that directory, there are four directories containing the patient's anatomy: bones, prostate, bladder and rectum. <br>
-The directories are composed of 13 meshes of the particular organ/bone in different timestamps and one plan mesh, all in .obj file format. 
+The application combines 3D mesh processing, registration calculations, numerical
+analysis, and interactive visualization to investigate how the two methods affect
+the positioning of anatomical structures during treatment.
 
+## Application
 
-**Note**: We use RM to denote registration methods within the code documentation.
+### Introduction
+
+Overview of the registration problem, the two methods, and the purpose of the
+comparison.
+
+![Introduction](screenshots/0_Intro.png)
+
+### Patients overview
+
+Interactive comparison of the registration results across patients and treatment
+timestamps, including displacement plots and heatmaps.
+
+![Patients overview](screenshots/1_Patients_overview.png)
+
+### Individual patient analysis
+
+Detailed analysis of a selected patient, including changes in organ position,
+differences between the registration methods, and rotation measurements obtained
+from ICP.
+
+![Individual patient analysis](screenshots/2_Individual_patient.png)
+
+### 3D visualization
+
+Interactive visualization of the anatomical structures, registration results,
+and different anatomical views.
+
+The original application uses patient-derived medical data. The visualization
+shown here uses synthetic meshes created specifically for this repository, so
+that the 3D functionality can be demonstrated without distributing confidential
+patient data.
+
+![3D visualization](screenshots/3_Organs_synth.png)
+
+## Data
+The application can be demonstrated using the precomputed data included in
+the `computations_files` directory. This allows the majority of the
+visualizations and analyses to be used without access to the original
+patient dataset.
+
+The original patient-specific anatomical meshes are required only for the
+3D visualization and timestamp analysis. They are not included in this
+repository because the data is confidential.
+
+Synthetic anatomical meshes are provided to demonstrate the 3D visualization
+without distributing patient-derived data.
+
+## Setup
+
+Install the required Python packages:
+
+```bash
+pip install numpy trimesh pywavefront scipy plotly dash
+```
+
+Place the project files and available data in the required directory structure and update `FILEPATH` in `constants.py` accordingly.
+
+Run the application with:
+
+```bash
+python application_dash.py
+```
+
+### Notes
+Within the source code and documentation, RM is used as an abbreviation for registration method.
